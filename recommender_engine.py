@@ -2,28 +2,24 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
+from engine import hybrid_similarity_recommender
 
 # Load cleaned job profiles data
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
-# Load the trained KMeans model (if needed)
+# Load the trained KMeans model (optional, currently unused)
 with open("models/kmeans_model.pkl", "rb") as f:
     kmeans_model = pickle.load(f)
 
-# Main recommendation function
-def final_kmeans_recommender(user_profile):
-    global job_profiles_clean  # <- Optional but makes it clear you're using the loaded one
+# Hybrid recommender function: RIASEC + Education + Skills
+def hybrid_similarity_recommender(user_profile):
+    global job_profiles_clean
 
-    # Copy data to avoid modifying original
     job_df = job_profiles_clean.copy()
 
     # --- RIASEC similarity ---
     riasec_cols = ['R', 'I', 'A', 'S', 'E', 'C']
-    user_vector = np.array([
-        user_profile['R'], user_profile['I'], user_profile['A'],
-        user_profile['S'], user_profile['E'], user_profile['C']
-    ]).reshape(1, -1)
-
+    user_vector = np.array([user_profile.get(code, 0) for code in riasec_cols]).reshape(1, -1)
     job_vectors = job_df[riasec_cols].values
     job_df['User RIASEC Similarity'] = cosine_similarity(user_vector, job_vectors)[0]
 
@@ -38,11 +34,12 @@ def final_kmeans_recommender(user_profile):
         "Doctoral or Professional Degree": 7,
         "Post-Doctoral Training": 8
     }
-    user_edu_score = edu_mapping.get(user_profile['education_level'], 1)
-    max_edu_score = 8
-    job_df['Normalized Education Score'] = job_df['Education Category'].apply(lambda x: min(x / max_edu_score, 1.0))
+    max_edu_score = max(edu_mapping.values())
+    user_edu_score = edu_mapping.get(user_profile.get('education_level'), 1)
+    job_df['Education Numeric'] = job_df['Education Category Label'].map(edu_mapping).fillna(1)
+    job_df['Normalized Education Score'] = job_df['Education Numeric'] / max_edu_score
 
-    # --- Skills ---
+    # --- Skill similarity ---
     skill_cols = [col for col in job_df.columns if col.startswith("Skill List_")]
     user_skills = user_profile.get('skills', [])
     user_skill_vector = np.zeros((1, len(skill_cols)))
@@ -55,18 +52,19 @@ def final_kmeans_recommender(user_profile):
     job_skill_matrix = job_df[skill_cols].fillna(0).values
     job_df['User Skill Similarity'] = cosine_similarity(user_skill_vector, job_skill_matrix)[0]
 
-    # --- Final Score ---
+    # --- Final weighted score ---
     job_df['Hybrid Recommendation Score'] = (
         job_df['User RIASEC Similarity'] +
         job_df['Normalized Education Score'] +
         job_df['User Skill Similarity']
     )
 
-    # --- Top 10 matches ---
+    # --- Top matches ---
     top_matches = job_df.sort_values('Hybrid Recommendation Score', ascending=False).head(10)
 
     return top_matches[[
         'Title', 'Description', 'Education Level', 'Preparation Level',
         'Education Category Label', 'Hybrid Recommendation Score',
-        'User RIASEC Similarity', 'Normalized Education Score', 'User Skill Similarity'
+        'User RIASEC Similarity', 'Normalized Education Score', 'User Skill Similarity',
+        'R', 'I', 'A', 'S', 'E', 'C'
     ]]
