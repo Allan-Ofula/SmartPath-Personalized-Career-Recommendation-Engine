@@ -69,7 +69,7 @@ st.markdown("""
     </style>
     <div class="header-container" style='text-align:center; padding: 1rem; background-color: #003262; border-radius: 10px;'>
         <h1 style='color:white;'>🔍 SmartPath Career Recommender</h1>
-        <p style='color:white;'>Welcome to SmartPath, your personalized career assistant powered by your interests, skills, and education level.<br>
+        <p style='color:white;'>Your personalized career assistant built by your interests, skills, and education level.<br>
         <em>Powered by the RIASEC models and real-world job market data.</em></p>
     </div>
 """, unsafe_allow_html=True)
@@ -85,6 +85,8 @@ with st.form("user_profile_form"):
         if not re.match("^[A-Za-z ]+$", user_name):
             st.warning("⚠️ Name must contain only letters and spaces.")
             user_name = None
+        else:
+            st.markdown(f"""<h3 style="color:#2c7be5;">Hi <strong style="color:#28a745;">{user_name}</strong>, Welcome to SmartPath, your personalized career assistant. Please proceed to select/enter interest, skills and education level below.</h3>""", unsafe_allow_html=True)
     else:
         st.warning("⚠️ Please enter your name.")
         user_name = None
@@ -120,11 +122,12 @@ with st.form("user_profile_form"):
     ]
     selected_skills = st.multiselect("Select your top skills", skill_options, max_selections=10)
     
+     # --- Submit Button Styling ---
     st.markdown("""
         <style>
         div.stButton > button:first-child {
-            background-color: #28a745;
-            color: white;
+            background-color: #28a745 !important;
+            color: white !important;
             font-weight: bold;
             border-radius: 8px;
             padding: 0.75em 1.5em;
@@ -158,11 +161,15 @@ if submitted and user_name:
 
     try:
         results = hybrid_similarity_recommender(user_profile)
+        # Fix for 'tuple'check if it's a tuple and unpack
+        if isinstance(results, tuple):
+            results = results[0]  
+    
     except Exception as e:
         st.error("⚠️ An error occurred while generating recommendations.")
         st.exception(e)
     else:
-        if results.empty:
+        if isinstance(results, pd.DataFrame) and results.empty:
             st.warning("No matching jobs found. Try adjusting your input.")
         else:
             st.success(f"🎯 Hi {user_name}, below are careers that match your RIASEC, skills, and education level.")
