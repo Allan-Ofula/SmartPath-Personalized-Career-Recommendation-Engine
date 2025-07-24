@@ -81,9 +81,6 @@ st.markdown("""
 # --- Language Toggle ---
 lang = st.radio("🌐 Select Language", ("English", "Kiswahili"), horizontal=True)
 
-# --- Initialize ---
-submitted = False
-
 # --- Input Form ---
 # Ensure session state keys exist
 if 'user_name' not in st.session_state:
@@ -181,7 +178,7 @@ if st.session_state['name_submitted']:
         submitted = st.form_submit_button("🚀 Get Career Recommendations")
 
 # --- Output Section ---
-if submitted and user_name:
+if st.session_state['name_submitted'] and 'submitted' in locals() and submitted and user_name:
     st.info("⏳ Generating recommendations...")
     progress = st.progress(0)
 
@@ -195,12 +192,16 @@ if submitted and user_name:
     try:
         for pct in range(0, 101, 10):
             progress.progress(pct)
-            st.sleep(0.05)
+            time.sleep(0.05)
 
         # --- Get career recommendations ---
         results = hybrid_similarity_recommender(user_profile)
 
-        # --- Add Job Icons ---
+        # --- Handle result if it's a tuple ---
+        if isinstance(results, tuple):  
+            results = results[0]
+
+        # --- Add Icons ---
         icons = {
             "Manager": "👔", "Developer": "💻", "Analyst": "📊", "Engineer": "🛠️",
             "Teacher": "📚", "Designer": "🎨", "Scientist": "🔬", "Doctor": "🩺",
@@ -213,29 +214,28 @@ if submitted and user_name:
                     return icon
             return "💼"
 
-        # Unpacks if recommender returns a tuple
-        if isinstance(results, tuple):  
-            results = results[0]
-        
-        # Apply icons
+        # --- Ensure valid DataFrame ---
         if isinstance(results, pd.DataFrame):
-           results['Icon'] = results['Title'].apply(get_icon)
-
-    
-        # --- Ensure DataFrame and sort if "Final Score" exists ---
-        if isinstance(results, pd.DataFrame):
-            if not results.empty and'Title' in results.columns and 'Description' in results.columns:
+            if not results.empty and 'Title' in results.columns and 'Description' in results.columns:
                 results = results.sort_values(by="Final Score", ascending=False).reset_index(drop=True)
-                top_job = results.iloc[0] # Set top_job after sorting
+                results['Icon'] = results['Title'].apply(get_icon)
+                top_job = results.iloc[0]
+            else:
+                st.error("⚠️ Results missing required columns.")
+                st.stop()
+        else:
+            st.error("⚠️ Unexpected data format. Please try again or contact support.")
+            st.stop()
 
     except Exception as e:
-        st.error("⚠️ Unexpected data format. Please try again or contact support..")
+        st.error("⚠️ Unexpected error occurred during recommendation generation.")
         st.exception(e)
     else:
-        if isinstance(results, pd.DataFrame) and results.empty:
+        if results.empty:
             st.warning("No matching jobs found. Try adjusting your input.")
         else:
             st.success(f"🎯 Hi {user_name}, here are your top careers matches based on your interests, skills, and education level.")
+            # (Rest of the job display logic follows...)
 
             # Highlight Top Career Match
             st.markdown(f"""
