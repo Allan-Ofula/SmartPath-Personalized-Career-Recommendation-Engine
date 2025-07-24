@@ -6,8 +6,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Load cleaned job profiles data
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
-# Hybrid recommender function: RIASEC + Education + Skills
-def hybrid_similarity_recommender(user_profile):
+# Hybrid recommender function: RIASEC + Education + Skills (Kenya-Job Market optimized Recommender)
+def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=0.5, edu_weight=0.1):
     global job_profiles_clean
 
     job_df = job_profiles_clean.copy()
