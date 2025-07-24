@@ -4,6 +4,7 @@ from engine import hybrid_similarity_recommender
 import streamlit as st
 import numpy as np
 import pandas as pd
+import re
 import altair as alt
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
@@ -33,7 +34,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Make the Button Bold & Tab-like ---
+# ---Button Styling---
 st.markdown("""
     <style>
     div.stButton > button:first-child {
@@ -54,7 +55,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Main Header (Mobile-Responsive) ---
+# --- Main Header---
 st.markdown("""
     <style>
         @media (max-width: 768px) {
@@ -68,13 +69,26 @@ st.markdown("""
     </style>
     <div class="header-container" style='text-align:center; padding: 1rem; background-color: #003262; border-radius: 10px;'>
         <h1 style='color:white;'>🔍 SmartPath Career Recommender</h1>
-        <p style='color:white;'>Welcome to SmartPath, your personalized career assistant based on the RIASEC model, education level and your skills.<br>
-        <em>Powered by the RIASEC models and real job market data.</em></p>
+        <p style='color:white;'>Welcome to SmartPath, your personalized career assistant powered by your interests, skills, and education level.<br>
+        <em>Powered by the RIASEC models and real-world job market data.</em></p>
     </div>
 """, unsafe_allow_html=True)
 
 # --- Input Form ---
 with st.form("user_profile_form"):
+    st.subheader("👤 Your Name")
+    user_name = st.text_input("Enter your name", value="")
+
+    # Name validation
+    if user_name:
+        user_name = user_name.strip().title()  # Auto-capitalize
+        if not re.match("^[A-Za-z ]+$", user_name):
+            st.warning("⚠️ Name must contain only letters and spaces.")
+            user_name = None
+    else:
+        st.warning("⚠️ Please enter your name.")
+        user_name = None
+
     st.subheader("🧠 Enter Your RIASEC Scores (0–7)")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -105,13 +119,38 @@ with st.form("user_profile_form"):
         "Reaction Time", "Speech Clarity"
     ]
     selected_skills = st.multiselect("Select your top skills", skill_options, max_selections=10)
+    
+    st.markdown("""
+        <style>
+        div.stButton > button:first-child {
+            background-color: #28a745;
+            color: white;
+            font-weight: bold;
+            border-radius: 8px;
+            padding: 0.75em 1.5em;
+            font-size: 1.1em;
+            border: none;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        div.stButton > button:first-child:hover {
+            background-color: #218838;
+            transform: scale(1.03);
+        }
+        div.stButton > button:first-child:active {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            transform: translateY(2px);
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     submitted = st.form_submit_button("🚀 Get Career Recommendations")
 
 # --- Output Section ---
-if submitted:
+if submitted and user_name:
     st.info("⏳ Generating recommendations...")
     user_profile = {
+        'user_name': user_name
         'R': r, 'I': i, 'A': a, 'S': s, 'E': e, 'C': c,
         'education_level': edu_level,
         'skills': selected_skills
@@ -126,7 +165,7 @@ if submitted:
         if results.empty:
             st.warning("No matching jobs found. Try adjusting your input.")
         else:
-            st.success("🎯 Recommendations ready!")
+            st.success("f"🎯 Hi {user_name}, below are careers that match your RIASEC, skills, and education level.")
 
             st.markdown("### 📌 Top Career Matches")
             st.caption("📘 Showing jobs that match your RIASEC, skills, and do not exceed your highest education level.")

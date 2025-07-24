@@ -70,19 +70,34 @@ def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=
     job_skill_matrix = job_df[skill_cols].fillna(0).values
     job_df['User Skill Similarity'] = cosine_similarity(user_skill_vector, job_skill_matrix)[0]
 
-    # --- Final weighted score ---
+    # --- Final Hybrid weighted score ---
     job_df['Hybrid Recommendation Score'] = (
-        job_df['User RIASEC Similarity'] +
-        job_df['Normalized Education Score'] +
-        job_df['User Skill Similarity']
+        (riasec_weight * job_df['User RIASEC Similarity']) +
+        (skill_weight * job_df['User Skill Similarity']) +
+        (edu_weight * job_df['Normalized Education Score'])
     )
 
     # --- Top 10 matches ---
     top_matches = job_df.sort_values('Hybrid Recommendation Score', ascending=False).head(10)
 
-    return top_matches[[ 
-        'Title', 'Description', 'Education Level', 'Preparation Level',
-        'Education Category Label', 'Hybrid Recommendation Score',
-        'User RIASEC Similarity', 'Normalized Education Score', 'User Skill Similarity',
-        'R', 'I', 'A', 'S', 'E', 'C'
-    ]]
+    # --- Personalized Message (for UI) ----
+    user_name = user_profile.get('user_name', 'User')
+    personalized_message = f"Hi {user_name}, below are the careers that match your RIASEC scores, skills, and education level."
+
+    # --- Return Output ---
+    return (
+        top_matches[[ 
+            'Title', 'Description', 'Education Level', 'Preparation Level',
+            'Education Category Label', 'Hybrid Recommendation Score',
+            'User RIASEC Similarity', 'Normalized Education Score', 'User Skill Similarity',
+            'R', 'I', 'A', 'S', 'E', 'C'
+        ]],
+        {
+            "personalized_message": personalized_message,
+            "weights_used": {
+                "RIASEC Weight": riasec_weight,
+                "Skill Weight": skill_weight,
+                "Education Weight": edu_weight
+            }
+        }
+    )
