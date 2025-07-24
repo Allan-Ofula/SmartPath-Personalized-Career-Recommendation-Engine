@@ -337,16 +337,21 @@ with st.expander("📈 User Insights Dashboard"):
     else:
         st.info("No user usage data yet.")
 
+# --- User Dashboard ---
+st.markdown("### 📈 User Insights Dashboard")
+
 # --- Footer ---
-st.markdown("""
-    <style>
-        @media (max-width: 768px) {
-            .footer { font-size: 0.8rem !important; }
-        }
-    </style>
-    <hr style="margin-top: 50px; margin-bottom: 10px;">
-    <div class="footer" style='text-align: center; font-size: 0.9rem; color: gray;'>
-        &copy; 2025 <strong>SmartPath</strong> &mdash; Developed by <strong>Allan Ofula</strong> |
-Youth Advocate & Data Scientist | <em>Moringa School Capstone Project</em>
-    </div>
+st.markdown("""  
+<hr style="margin-top: 50px; margin-bottom: 10px;">
+<div style='
+    text-align: center;
+    font-size: 0.9rem;
+    color: gray;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #ccc;'>
+    &copy; 2025 <strong>SmartPath</strong> &mdash; Developed by <strong>Allan Ofula</strong> <br>
+    Youth Advocate & Data Scientist | Moringa School Capstone Project
+</div>
 """, unsafe_allow_html=True)
+
