@@ -15,9 +15,12 @@ from datetime import datetime
 import time
 import uuid
 from analytics import log_usage
-from analytics import some_function
 from feedback import save_feedback, get_average_rating, load_all_feedback
-from analytics import log_usage, load_usage_data
+try:
+    from analytics import log_usage, load_usage_data
+except ImportError:
+    from analytics_stub import log_usage, load_usage_data
+
 
 # --- Page Configuration ---
 st.set_page_config(
