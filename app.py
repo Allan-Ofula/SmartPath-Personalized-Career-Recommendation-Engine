@@ -1,6 +1,6 @@
   # --- Required Libraries ---
 import streamlit as st
-from recommender_engine import final_kmeans_recommender
+from engine import hybrid_similarity_recommender
 import numpy as np
 import pandas as pd
 import altair as alt

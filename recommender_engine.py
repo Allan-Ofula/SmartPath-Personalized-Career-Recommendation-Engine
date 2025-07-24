@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
-from engine import hybrid_similarity_recommender
 
 # Load cleaned job profiles data
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
