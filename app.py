@@ -5,10 +5,13 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import re
+import json
+import random
 import altair as alt
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from sklearn.metrics.pairwise import cosine_similarity
+from datetime import datetime
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -69,27 +72,37 @@ st.markdown("""
     </style>
     <div class="header-container" style='text-align:center; padding: 1rem; background-color: #003262; border-radius: 10px;'>
         <h1 style='color:white;'>🔍 SmartPath Career Recommender</h1>
-        <p style='color:white;'>Your personalized career assistant built by your interests, skills, and education level.<br>
-        <em>Powered by the RIASEC models and real-world job market data.</em></p>
+        <p style='color:white;'>Discover careers aligned with your strengths, passions, and education.<br>
+        <em>Powered by the RIASEC Science models and real-world job market data.</em></p>
     </div>
 """, unsafe_allow_html=True)
+
+# --- Language Toggle ---
+lang = st.radio("🌐 Select Language", ("English", "Kiswahili"), horizontal=True)
 
 # --- Input Form ---
 with st.form("user_profile_form"):
     st.subheader("👤 Your Name")
-    user_name = st.text_input("Enter your name", value="")
+    user_name = st.text_input("Enter your name").strip().title() # Auto-capitalize
 
-    # Name validation
-    if user_name:
-        user_name = user_name.strip().title()  # Auto-capitalize
-        if not re.match("^[A-Za-z ]+$", user_name):
-            st.warning("⚠️ Name must contain only letters and spaces.")
-            user_name = None
-        else:
-            st.markdown(f"""<h3 style="color:#2c7be5;">Hi <strong style="color:#28a745;">{user_name}</strong>, Welcome to SmartPath, your personalized career assistant. Please proceed to select/enter interest, skills and education level below.</h3>""", unsafe_allow_html=True)
-    else:
+    # Submit button (must be inside the form)
+    submitted = st.form_submit_button("Continue")
+
+# --- Name validation ---
+if submitted:
+    if not user_name:
         st.warning("⚠️ Please enter your name.")
         user_name = None
+    elif not re.match("^[A-Za-z ]+$", user_name):
+        st.warning("⚠️ Name must contain only letters and spaces.")
+        user_name = None
+    else:
+        st.markdown(f"""
+            <h3 style="color:#2c7be5;">
+                Hi <strong style="color:#28a745;">{user_name}</strong>, Welcome to SmartPath, your personalized career assistant. 
+                Please proceed to fill your profile below.
+            </h3>
+        """, unsafe_allow_html=True)
 
     st.subheader("🧠 Enter Your RIASEC Scores (0–7)")
     col1, col2, col3 = st.columns(3)
@@ -152,6 +165,8 @@ with st.form("user_profile_form"):
 # --- Output Section ---
 if submitted and user_name:
     st.info("⏳ Generating recommendations...")
+    progress = st.progress(0)
+
     user_profile = {
         'user_name': user_name,
         'R': r, 'I': i, 'A': a, 'S': s, 'E': e, 'C': c,
@@ -160,11 +175,39 @@ if submitted and user_name:
     }
 
     try:
+        for pct in range(0, 101, 10):
+            progress.progress(pct)
+            st.sleep(0.05)
+
+        # --- Get career recommendations ---
         results = hybrid_similarity_recommender(user_profile)
-        # Fix for 'tuple'check if it's a tuple and unpack
-        if isinstance(results, tuple):
-            results = results[0]  
-    
+
+        # --- Add Job Icons ---
+        icons = {
+            "Manager": "👔", "Developer": "💻", "Analyst": "📊", "Engineer": "🛠️",
+            "Teacher": "📚", "Designer": "🎨", "Scientist": "🔬", "Doctor": "🩺",
+            "Nurse": "👩‍⚕️", "Technician": "🔧", "Consultant": "🧠"
+        }
+
+        def get_icon(title):
+            for keyword, icon in icons.items():
+                if keyword.lower() in title.lower():
+                    return icon
+            return "💼"
+
+        # Apply icons
+       if isinstance(results, pd.DataFrame):
+           results['Icon'] = results['Title'].apply(get_icon)
+
+        if isinstance(results, tuple):  # Unpacks if recommender returns a tuple
+            results = results[0]
+
+        # --- Ensure DataFrame and sort if "Final Score" exists ---
+        if isinstance(results, pd.DataFrame):
+            if "Final Score" in results.columns:
+                results = results.sort_values(by="Final Score", ascending=False).reset_index(drop=True)
+                top_job = results.iloc[0] # Set top_job after sorting
+
     except Exception as e:
         st.error("⚠️ An error occurred while generating recommendations.")
         st.exception(e)
@@ -172,12 +215,21 @@ if submitted and user_name:
         if isinstance(results, pd.DataFrame) and results.empty:
             st.warning("No matching jobs found. Try adjusting your input.")
         else:
-            st.success(f"🎯 Hi {user_name}, below are careers that match your RIASEC, skills, and education level.")
+            st.success(f"🎯 Hi {user_name}, here are your top careers matches based on your interests, skills, and education level.")
+
+            # Highlight Top Career Match
+            st.markdown(f"""
+                <div style="background-color:#e0f7fa;padding:15px;border-radius:10px;">
+                    <h2 style="color:#00796b;">🌟 Your Top Career Match: <span style="color:#d32f2f;">{top_job['Title']}</span></h2>
+                    <p style="font-size:16px;">{top_job['Description'][:250]}...</p> 
+                </div> 
+            """, unsafe_allow_html=True)
 
             st.markdown("### 📌 Top Career Matches")
-            st.caption("📘 Showing jobs that match your RIASEC, skills, and do not exceed your highest education level.")
+            st.caption("📘 Showing careers that match your Interests, passion, skills, and education.")
             st.dataframe(results.drop(columns=['R', 'I', 'A', 'S', 'E', 'C']), use_container_width=True)
 
+            # --- Score Breakdown Chart ---
             st.markdown("### 📊 Score Breakdown for Top 5 Jobs")
             top5 = results.head(5).copy()
             melted = pd.melt(
@@ -198,25 +250,16 @@ if submitted and user_name:
             )
             st.altair_chart(chart, use_container_width=True)
 
-            # Radar Chart: Top job vs user
+            # --- Radar Chart ---
             st.markdown("### 🧭 RIASEC Match (Top Career vs You)") 
-
-            # Extract top recommended job
             top_job = results.iloc[0]
-            
-            # RIASEC axes
             riasec_labels = ['R', 'I', 'A', 'S', 'E', 'C']
-            
-            # Values
             user_values = [user_profile[code] for code in riasec_labels]
             top_job_values = [top_job[code] for code in riasec_labels]
-            
-            # Ensure radar chart is closed by repeating the first value
             user_values += user_values[:1]
             top_job_values += top_job_values[:1]
             riasec_labels += riasec_labels[:1]
-            
-            # Plotly radar chart
+
             fig = go.Figure()
             fig.add_trace(go.Scatterpolar(
                 r=user_values,
@@ -225,7 +268,6 @@ if submitted and user_name:
                 name='You',
                 line=dict(color='blue')
             ))
-
             fig.add_trace(go.Scatterpolar(
                 r=top_job_values,
                 theta=riasec_labels,
@@ -233,20 +275,21 @@ if submitted and user_name:
                 name=f"{top_job['Title']}",
                 line=dict(color='orange')
             ))
-
             fig.update_layout(
-                polar=dict(
-                    radialaxis=dict(visible=True, range=[0, 7]),
-                ),
+                polar=dict(radialaxis=dict(visible=True, range=[0, 7])),
                 showlegend=True,
                 width=600,
                 height=500,
                 title="RIASEC Profile Comparison"
             )
-
             st.plotly_chart(fig, use_container_width=True)
 
-
+            # --- Top Job Description ---
             st.markdown("### 📝 Description of Top Job")
             st.info(f"**{top_job['Title']}**\n\n{top_job['Description']}")
-  
+            
+            # 🎉 Surprise Career Match (just for fun)
+            if st.checkbox("🎉 Surprise Career Match (just for fun!)"):
+                random_job = results.sample(1).iloc[0]
+                st.info(f"💡 **{random_job['Icon']} {random_job['Title']}**\n\n{random_job['Description'][:250]}...")
+
