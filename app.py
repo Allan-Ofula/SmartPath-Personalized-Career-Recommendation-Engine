@@ -150,7 +150,7 @@ with st.form("user_profile_form"):
 if submitted and user_name:
     st.info("⏳ Generating recommendations...")
     user_profile = {
-        'user_name': user_name
+        'user_name': user_name,
         'R': r, 'I': i, 'A': a, 'S': s, 'E': e, 'C': c,
         'education_level': edu_level,
         'skills': selected_skills
@@ -165,7 +165,7 @@ if submitted and user_name:
         if results.empty:
             st.warning("No matching jobs found. Try adjusting your input.")
         else:
-            st.success("f"🎯 Hi {user_name}, below are careers that match your RIASEC, skills, and education level.")
+            st.success(f"🎯 Hi {user_name}, below are careers that match your RIASEC, skills, and education level.")
 
             st.markdown("### 📌 Top Career Matches")
             st.caption("📘 Showing jobs that match your RIASEC, skills, and do not exceed your highest education level.")
