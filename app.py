@@ -5,6 +5,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import altair as alt
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -151,7 +152,7 @@ if submitted:
             st.altair_chart(chart, use_container_width=True)
 
             # Radar Chart: Top job vs user
-            st.markdown("### 🧭 RIASEC Match (Top Career vs You)")
+            st.markdown("### 🧭 RIASEC Match (Top Career vs You)") 
 
             # Extract top recommended job
             top_job = results.iloc[0]
@@ -182,7 +183,7 @@ if submitted:
                 r=top_job_values,
                 theta=riasec_labels,
                 fill='toself',
-                name=f"{top_job['career']}",
+                name=f"{top_job['Title']}",
                 line=dict(color='orange')
             ))
 

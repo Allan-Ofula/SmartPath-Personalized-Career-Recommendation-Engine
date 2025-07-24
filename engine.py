@@ -1,14 +1,10 @@
+# --- Required Libraries ---
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-import pickle
 
 # Load cleaned job profiles data
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
-
-# Load the trained KMeans model (optional, currently unused)
-# with open("models/kmeans_model.pkl", "rb") as f:
-    # kmeans_model = pickle.load(f)
 
 # Hybrid recommender function: RIASEC + Education + Skills
 def hybrid_similarity_recommender(user_profile):
@@ -61,7 +57,7 @@ def hybrid_similarity_recommender(user_profile):
     # --- Top matches ---
     top_matches = job_df.sort_values('Hybrid Recommendation Score', ascending=False).head(10)
 
-    return top_matches[[
+    return top_matches[[ 
         'Title', 'Description', 'Education Level', 'Preparation Level',
         'Education Category Label', 'Hybrid Recommendation Score',
         'User RIASEC Similarity', 'Normalized Education Score', 'User Skill Similarity',
