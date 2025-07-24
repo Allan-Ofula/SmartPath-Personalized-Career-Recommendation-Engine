@@ -347,6 +347,6 @@ st.markdown("""
     </style>
     <hr style="margin-top: 50px; margin-bottom: 10px;">
     <div class="footer" style='text-align: center; font-size: 0.9rem; color: gray;'>
-        &copy; 2025 <strong>SmartPath</strong> | Developed by Allan Ofula | Moringa School Capstone Project
+        &copy; 2025 <strong>SmartPath</strong> | Developed by Allan Ofula - Youth Advocate & Data Scientist | Moringa School Capstone Project
     </div>
 """, unsafe_allow_html=True)
