@@ -118,7 +118,14 @@ if st.session_state['name_submitted']:
         ], index=4)
 
         st.subheader("🛠️ Strong Skills (Select up to 10)")
-        skill_options = [...]  # your full list remains here
+        skill_options = ["Data Analysis", "Communication", "Problem Solving", "Project Management", "Creativity",
+            "Critical Thinking", "Leadership", "Teamwork", "Technical Writing", "Machine Learning",
+            "SQL", "Python", "R", "Tableau", "Excel", "Public Speaking", "Negotiation", "Sales",
+            "Graphic Design", "Customer Service", "Financial Literacy", "Coding", "UX/UI Design",
+            "Time Management", "Oral Comprehension", "Written Comprehension", "Originality",
+            "Deductive Reasoning", "Inductive Reasoning", "Flexibility of Closure", "Visualization",
+            "Reaction Time", "Speech Clarity"
+        ]
         selected_skills = st.multiselect("Select your top skills", skill_options, max_selections=10)
 
         submitted = st.form_submit_button("🚀 Get Career Recommendations")
