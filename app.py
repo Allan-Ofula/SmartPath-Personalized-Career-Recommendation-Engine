@@ -117,7 +117,6 @@ if st.session_state['name_submitted']:
     """, unsafe_allow_html=True)
 
     # --- Second Form: RIASEC + Skills + Education ---
-    submitted = False
     with st.form("career_profile_form"):
         st.subheader("🧠 Enter Your RIASEC Scores (0–7)")
         
@@ -211,13 +210,15 @@ if submitted and user_name:
                     return icon
             return "💼"
 
+        # Unpacks if recommender returns a tuple
+        if isinstance(results, tuple):  
+            results = results[0]
+        
         # Apply icons
         if isinstance(results, pd.DataFrame):
            results['Icon'] = results['Title'].apply(get_icon)
 
-        if isinstance(results, tuple):  # Unpacks if recommender returns a tuple
-            results = results[0]
-
+    
         # --- Ensure DataFrame and sort if "Final Score" exists ---
         if isinstance(results, pd.DataFrame):
             if not results.empty and'Title' in results.columns and 'Description' in results.columns:
