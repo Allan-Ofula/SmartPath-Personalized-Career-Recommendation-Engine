@@ -1,3 +1,5 @@
+from engine import hybrid_similarity_recommender
+
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -7,8 +9,8 @@ import pickle
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
 # Load the trained KMeans model (optional, currently unused)
-with open("models/kmeans_model.pkl", "rb") as f:
-    kmeans_model = pickle.load(f)
+# with open("models/kmeans_model.pkl", "rb") as f:
+    # kmeans_model = pickle.load(f)
 
 # Hybrid recommender function: RIASEC + Education + Skills
 def hybrid_similarity_recommender(user_profile):

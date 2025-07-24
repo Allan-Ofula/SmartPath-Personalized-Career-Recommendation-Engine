@@ -1,10 +1,12 @@
   # --- Required Libraries ---
-import streamlit as st
 from engine import hybrid_similarity_recommender
+
+import streamlit as st
 import numpy as np
 import pandas as pd
 import altair as alt
 import plotly.graph_objects as go
+from sklearn.metrics.pairwise import cosine_similarity
 
 # --- Page Configuration ---
 st.set_page_config(
