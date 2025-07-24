@@ -81,6 +81,9 @@ st.markdown("""
 # --- Language Toggle ---
 lang = st.radio("🌐 Select Language", ("English", "Kiswahili"), horizontal=True)
 
+# --- Initialize ---
+submitted = False
+
 # --- Input Form ---
 # Ensure session state keys exist
 if 'user_name' not in st.session_state:
