@@ -129,6 +129,7 @@ if submitted:
             st.success("🎯 Recommendations ready!")
 
             st.markdown("### 📌 Top Career Matches")
+            st.caption("📘 Showing jobs that match your RIASEC, skills, and do not exceed your highest education level.")
             st.dataframe(results.drop(columns=['R', 'I', 'A', 'S', 'E', 'C']), use_container_width=True)
 
             st.markdown("### 📊 Score Breakdown for Top 5 Jobs")

@@ -1,4 +1,4 @@
-# --- Required Libraries ---
+# --- Required Libraries --- 
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -18,7 +18,7 @@ def hybrid_similarity_recommender(user_profile):
     job_vectors = job_df[riasec_cols].values
     job_df['User RIASEC Similarity'] = cosine_similarity(user_vector, job_vectors)[0]
 
-    # --- Education normalization ---
+    # --- Education normalization and filtering ---
     edu_mapping = {
         "Less than High School": 1,
         "High School Diploma or Equivalent": 2,
@@ -29,10 +29,15 @@ def hybrid_similarity_recommender(user_profile):
         "Doctoral or Professional Degree": 7,
         "Post-Doctoral Training": 8
     }
+
     max_edu_score = max(edu_mapping.values())
     user_edu_score = edu_mapping.get(user_profile.get('education_level'), 1)
+    
     job_df['Education Numeric'] = job_df['Education Category Label'].map(edu_mapping).fillna(1)
     job_df['Normalized Education Score'] = job_df['Education Numeric'] / max_edu_score
+
+    # 🔴 FILTER: Only return jobs requiring education <= user's level
+    job_df = job_df[job_df['Education Numeric'] <= user_edu_score]
 
     # --- Skill similarity ---
     skill_cols = [col for col in job_df.columns if col.startswith("Skill List_")]
