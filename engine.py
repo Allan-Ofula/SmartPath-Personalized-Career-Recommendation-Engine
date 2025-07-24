@@ -18,7 +18,7 @@ def hybrid_similarity_recommender(user_profile):
     job_vectors = job_df[riasec_cols].values
     job_df['User RIASEC Similarity'] = cosine_similarity(user_vector, job_vectors)[0]
 
-    # --- Education normalization and filtering ---
+    # --- Education normalization ---
     edu_mapping = {
         "Less than High School": 1,
         "High School Diploma or Equivalent": 2,
@@ -30,13 +30,31 @@ def hybrid_similarity_recommender(user_profile):
         "Post-Doctoral Training": 8
     }
 
+    # Normalize inconsistent education labels in dataset
+    label_normalization = {
+        "Less than High School": "Less than High School",
+        "High School Diploma or equivalent": "High School Diploma or Equivalent",
+        "Post-Secondary Certificate": "Some College Courses",
+        "Associate's Degree": "Associate Degree",
+        "Bachelor's Degree": "Bachelor's Degree",
+        "Post-Baccalaureate Certificate": "Bachelor's Degree",
+        "Post-Master's Certificate": "Master's Degree",
+        "First Professional Degree": "Master's Degree",
+        "Master's Degree": "Master's Degree",
+        "Doctoral Degree": "Doctoral or Professional Degree",
+        "Post-Doctoral Training": "Post-Doctoral Training"
+    }
+
+    # Apply normalization
+    job_df['Normalized Education Category'] = job_df['Education Category Label'].map(label_normalization)
+    job_df['Education Numeric'] = job_df['Normalized Education Category'].map(edu_mapping).fillna(1)
+
+    # Calculate normalized score
     max_edu_score = max(edu_mapping.values())
     user_edu_score = edu_mapping.get(user_profile.get('education_level'), 1)
-    
-    job_df['Education Numeric'] = job_df['Education Category Label'].map(edu_mapping).fillna(1)
     job_df['Normalized Education Score'] = job_df['Education Numeric'] / max_edu_score
 
-    # 🔴 FILTER: Only return jobs requiring education <= user's level
+    # 🔴 FILTER: Only jobs the user qualifies for (education level)
     job_df = job_df[job_df['Education Numeric'] <= user_edu_score]
 
     # --- Skill similarity ---
@@ -59,7 +77,7 @@ def hybrid_similarity_recommender(user_profile):
         job_df['User Skill Similarity']
     )
 
-    # --- Top matches ---
+    # --- Top 10 matches ---
     top_matches = job_df.sort_values('Hybrid Recommendation Score', ascending=False).head(10)
 
     return top_matches[[ 
