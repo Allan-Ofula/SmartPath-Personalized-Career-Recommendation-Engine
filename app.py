@@ -106,8 +106,8 @@ if not st.session_state['name_submitted']:
             st.experimental_rerun()
 
 # SECOND FORM: Show after name is submitted
-else:
-    user_name = st.session_state['user_name']
+if st.session_state['name_submitted']:
+    user_name = st.session_state['user_name']  # Retrieve saved name
 
     st.markdown(f"""
         <h3 style="color:#2c7be5;">
@@ -117,6 +117,7 @@ else:
     """, unsafe_allow_html=True)
 
     # --- Second Form: RIASEC + Skills + Education ---
+    submitted = False
     with st.form("career_profile_form"):
         st.subheader("🧠 Enter Your RIASEC Scores (0–7)")
         
