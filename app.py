@@ -13,6 +13,11 @@ import plotly.graph_objects as go
 from sklearn.metrics.pairwise import cosine_similarity
 from datetime import datetime
 import time
+import uuid
+from analytics import log_usage
+from analytics import some_function
+from feedback import save_feedback, get_average_rating, load_all_feedback
+from analytics import log_usage, load_usage_data
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -140,6 +145,7 @@ if st.session_state['name_submitted']:
             }
 
 # --- Output Section ---
+session_id = str(uuid.uuid4())
 if st.session_state.get('career_submitted'):
     st.info("⏳ Generating recommendations...")
     progress = st.progress(0)
@@ -220,6 +226,16 @@ if st.session_state.get('career_submitted'):
             match_score = int(100 - (euclidean_distance / (np.sqrt(len(user_values[:-1])) * 7)) * 100)
             match_score = max(0, min(match_score, 100))
 
+            log_usage(
+                session_id=session_id,
+                user_name=user_name,
+                riasec_scores={"R": r, "I": i, "A": a, "S": s, "E": e, "C": c},
+                education=edu_level,
+                skills=selected_skills,
+                top_match=top_job['Title'],
+                match_score=match_score
+            )
+
             st.markdown(f"🎯 **Match Score: {match_score}%** – Alignment with *{top_job['Title']}* role")
             fig = go.Figure()
             fig.add_trace(go.Scatterpolar(r=user_values, theta=riasec_labels, fill='toself', name='You',
@@ -253,4 +269,69 @@ if st.session_state.get('career_submitted'):
             if st.checkbox("🎉 Surprise Career Match (just for fun!)"):
                 random_job = results.sample(1).iloc[0]
                 st.info(f"💡 **{random_job['Icon']} {random_job['Title']}**\n\n{random_job['Description'][:250]}...")
+
+# --- 📣 Feedback Section ---
+st.markdown("---")
+st.subheader("💬 We'd love your feedback!")
+
+with st.form("feedback_form"):
+    col1, col2 = st.columns([1, 3])
+
+    with col1:
+        rating = st.slider("How would you rate your results?", 1, 5, 3)
+    with col2:
+        comment = st.text_area("Any comments or suggestions?")
+
+    submit_feedback = st.form_submit_button("Submit Feedback")
+
+    if submit_feedback:
+        anon = st.checkbox("Submit anonymously", value=False)
+        save_feedback(rating, comment, session_id, user_name if not anon else None)
+        st.success("✅ Thank you! Your feedback has been recorded.")
+
+        avg_rating = get_average_rating()
+        if avg_rating:
+            st.markdown(f"⭐ Average user rating so far: **{avg_rating}/5**")
+
+# Emoji Feedback
+st.markdown("Or leave a quick emoji reaction to your result:")
+
+emoji_col1, emoji_col2, emoji_col3 = st.columns(3)
+
+with emoji_col1:
+    if st.button("😊 Yes, I liked it"):
+        save_feedback(5, "Positive emoji reaction", session_id)
+        st.toast("Thanks for the smile!")
+with emoji_col2:
+    if st.button("😐"):
+        save_feedback(3, "Neutral emoji reaction", session_id)
+        st.toast("Thanks for your input!")
+with emoji_col3:
+    if st.button("😞"):
+        save_feedback(1, "Negative emoji reaction", session_id)
+        st.toast("Sorry to hear that. We'll improve!")
+
+# section for admin or developers
+with st.expander("📊 View All Feedback (Admin Only)"):
+    df_feedback = load_all_feedback()
+
+# --- Insights Dashboard ---
+with st.expander("📈 User Insights Dashboard"):
+    usage_df = load_usage_data()
+
+    if not usage_df.empty:
+        st.metric("Total Users", usage_df["session_id"].nunique())
+
+        st.markdown("### 🎓 Education Levels")
+        st.bar_chart(usage_df["education"].value_counts())
+
+        st.markdown("### 💼 Most Recommended Careers")
+        st.bar_chart(usage_df["top_match"].value_counts())
+
+        st.markdown("### 🧠 Avg Match Score by RIASEC")
+        for trait in ["R", "I", "A", "S", "E", "C"]:
+            avg_scores = usage_df.groupby(trait)["match_score"].mean().reset_index()
+            st.line_chart(avg_scores.set_index(trait))
+    else:
+        st.info("No user usage data yet.")
 
