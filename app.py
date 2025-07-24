@@ -115,7 +115,7 @@ if submitted:
     }
 
     try:
-        results = final_kmeans_recommender(user_profile)
+        results = hybrid_similarity_recommender(user_profile)
     except Exception as e:
         st.error("⚠️ An error occurred while generating recommendations.")
         st.exception(e)
