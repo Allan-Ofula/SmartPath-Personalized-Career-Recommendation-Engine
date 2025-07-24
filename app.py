@@ -338,3 +338,15 @@ with st.expander("📈 User Insights Dashboard"):
     else:
         st.info("No user usage data yet.")
 
+# --- Footer ---
+st.markdown("""
+    <style>
+        @media (max-width: 768px) {
+            .footer { font-size: 0.8rem !important; }
+        }
+    </style>
+    <hr style="margin-top: 50px; margin-bottom: 10px;">
+    <div class="footer" style='text-align: center; font-size: 0.9rem; color: gray;'>
+        &copy; 2025 <strong>SmartPath</strong> | Developed by Allan Ofula | Moringa School Capstone Project
+    </div>
+""", unsafe_allow_html=True)
