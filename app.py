@@ -196,7 +196,7 @@ if submitted and user_name:
             return "💼"
 
         # Apply icons
-       if isinstance(results, pd.DataFrame):
+        if isinstance(results, pd.DataFrame):
            results['Icon'] = results['Title'].apply(get_icon)
 
         if isinstance(results, tuple):  # Unpacks if recommender returns a tuple
