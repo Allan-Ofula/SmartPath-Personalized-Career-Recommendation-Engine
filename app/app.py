@@ -14,7 +14,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from datetime import datetime
 import time
 import uuid
-from analytics import log_usage
 from feedback import save_feedback, get_average_rating, load_all_feedback
 try:
     from analytics import log_usage, load_usage_data
@@ -347,6 +346,7 @@ st.markdown("""
     </style>
     <hr style="margin-top: 50px; margin-bottom: 10px;">
     <div class="footer" style='text-align: center; font-size: 0.9rem; color: gray;'>
-        &copy; 2025 <strong>SmartPath</strong> | Developed by Allan Ofula - Youth Advocate & Data Scientist | Moringa School Capstone Project
+        &copy; 2025 <strong>SmartPath</strong> &mdash; Developed by <strong>Allan Ofula</strong> |
+Youth Advocate & Data Scientist | <em>Moringa School Capstone Project</em>
     </div>
 """, unsafe_allow_html=True)

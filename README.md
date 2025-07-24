@@ -5,7 +5,8 @@ Empowering informed career decisions through intelligent, data-driven recommenda
   <img src="images/SmartPath_Career_Growth_Logo.png" alt="SmartPath Career Growth Logo" width="600"/>
 </p>
 Discover careers aligned with your strengths, passions, and education.  
-*Powered by RIASEC Science and real-world job market data.*
+
+Powered by RIASEC Science and real-world job market data.
 
 ## Overview
 SmartPath is a personalized career recommendation system that helps students, graduates, and job seekers, especially from underserved communities to discover careers aligned with their interests, skills, and education level, powered by the O*NET occupational database.
@@ -43,7 +44,6 @@ SmartPath leverages curated occupational data from reliable public resources to 
 | **Interests Data**         | RIASEC distributions per job                                    | [O\*NET Interests](https://www.onetonline.org/find/descriptor/result/4.A.1.a.1)  |
 | **Skills Importance**      | Importance ratings for 35+ skills per job                       | [O\*NET Skills](https://www.onetonline.org/skills/)                              |
 | **Education Requirements** | Mapped typical education levels per occupation                  | [O\*NET Education](https://www.onetonline.org/find/descriptor/browse/Education/) |
-|
 
 The datasets were cleaned, transformed, and combined into a unified job profile format (job_profiles_clean.csv) used for real-time matching.
 
@@ -55,7 +55,6 @@ Cleaned Dataset Sample (hosted for testing/demo):./data/job_profiles_clean.csv
 
 - **Python 3.10+**
 - **Pandas**, **NumPy**, **Scikit-learn**, **XGBoost**
-- 
 - **Matplotlib / Seaborn** for visualizations
 - **Jupyter Notebook** (Interactive prototyping)
 - **Streamlit** for future UI
@@ -155,7 +154,9 @@ We would like to express our sincere gratitude to:
    - Mildred Jepkosgei 
    - Brian Chacha
    - Antony Muiko
+
 for  the mentorship and support in fostering innovative talent.
+
 This work reflects a growing commitment to applying data science in empowering youth, career clarity, and digital transformation in Africa.
 
 ---
