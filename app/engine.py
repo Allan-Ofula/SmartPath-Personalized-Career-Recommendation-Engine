@@ -10,15 +10,32 @@ import os
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
 def get_encoded_skill_columns():
-    skills_file = Path(__file__).parent / "data" / "Skills.xlsx"
+    """
+    Load Skills.xlsx and return a sorted list of unique skill names
+    from the 'Element Name' column where 'Scale ID' == 'IM'.
+    """
+    try:
+        data_path = Path(__file__).parent / "data"
+        skills_file = data_path / "Skills.xlsx"
+        
+        # Load Excel file
+        skills_df = pd.read_excel(skills_file)
 
-    if skills_file.exists():
-        df = pd.read_excel(skills_file)
-        if "Skill" in df.columns:
-            return df["Skill"].dropna().unique().tolist()
-    print("Skills.xlsx not found or 'Skill' column missing.")
-    return []
+        # Strip whitespace from all string columns (especially 'Scale ID')
+        skills_df['Scale ID'] = skills_df['Scale ID'].astype(str).str.strip()
+        skills_df['Element Name'] = skills_df['Element Name'].astype(str).str.strip()
 
+        # Filter only "Importance" skills
+        importance_skills = skills_df[skills_df['Scale ID'] == 'IM']
+
+        # Get unique, sorted skill names from 'Element Name'
+        skill_names = sorted(importance_skills['Element Name'].unique())
+
+        return skill_names
+    
+    except Exception as e:
+        print(f"❌ Error loading skills from Skills.xlsx: {e}")
+        return []
 
 # --- START FUNCTION ---
 def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=0.5, edu_weight=0.1):
