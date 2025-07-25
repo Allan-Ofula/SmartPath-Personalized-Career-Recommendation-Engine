@@ -10,27 +10,15 @@ import os
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
 def get_encoded_skill_columns():
-    try:
-        skills_path = Path(__file__).resolve().parent / "data" / "Skills.xlsx"
-        skills_df = pd.read_excel(skills_path)
+    skills_file = Path(__file__).parent / "data" / "Skills.xlsx"
 
-        print("[DEBUG] Columns in Skills.xlsx:", skills_df.columns.tolist())
+    if skills_file.exists():
+        df = pd.read_excel(skills_file)
+        if "Skill" in df.columns:
+            return df["Skill"].dropna().unique().tolist()
+    print("Skills.xlsx not found or 'Skill' column missing.")
+    return []
 
-        # Flexible matching: Try multiple common prefixes
-        encoded_columns = [col for col in skills_df.columns if any(
-            col.startswith(prefix) for prefix in ["Skill List_", "Skill_", "Skill "])]
-
-        # Fallback: use all columns
-        if not encoded_columns:
-            encoded_columns = skills_df.columns.tolist()
-
-        print("[DEBUG] Final skill columns:", encoded_columns)
-
-        return [col.replace("Skill List_", "").replace("Skill_", "").strip() for col in encoded_columns]
-
-    except Exception as e:
-        print(f"[ERROR] Could not load skills: {e}")
-        return []
 
 # --- START FUNCTION ---
 def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=0.5, edu_weight=0.1):

@@ -127,12 +127,17 @@ if st.session_state['name_submitted']:
         st.subheader("🛠️ Strong Skills (Select up to 5)")
         try:
             from engine import get_encoded_skill_columns
-            skill_options = get_encoded_skill_columns()
+            skills_list = get_encoded_skill_columns()
         except Exception as e:
-            st.error("Failed to load skill options.")
-            skill_options = []
-
-        selected_skills = st.multiselect("Select your top skills", skill_options, max_selections=5)
+            st.error(f"❌ Failed to load skill options: {e}")
+            skills_list = []
+        
+        skills_list = get_encoded_skill_columns() or []
+        if not isinstance(skills_list, list):
+            st.error("Skill list is not formatted correctly.")
+            skills_list = []
+            
+        selected_skills = st.multiselect("Select your top skills", skills_list, max_selections=5)
 
         # Validation
         if len(selected_skills) == 0:
