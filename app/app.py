@@ -143,6 +143,13 @@ if st.session_state['name_submitted']:
         ]
         selected_skills = st.multiselect("Select your top skills", skill_options, max_selections=5)
 
+        # Validation
+        if len(selected_skills) == 0:
+            st.warning("⚠️ You haven't selected any skills. This may affect your recommendations.")
+            user_skills = []
+        else:
+            user_skills = selected_skills
+
         submitted = st.form_submit_button("🚀 Get Career Recommendations")
 
         if submitted:
@@ -207,19 +214,17 @@ if st.session_state.get('career_submitted'):
             """, unsafe_allow_html=True)
 
             st.markdown("### 📌 Top Career Matches")
-            st.dataframe(results.drop(columns=['R', 'I', 'A', 'S', 'E', 'C']), use_container_width=True)
+            st.dataframe(
+                results.drop(columns=['R', 'I', 'A', 'S', 'E', 'C']),
+                use_container_width=True
+            )
 
             # --- Score Breakdown ---
             st.markdown("### 📊 Score Breakdown for Top 5 Jobs")
             top5 = results.head(5).copy()
 
             # Sort by total score to ensure meaningful bar order
-            top5['Total'] = (
-                top5['User RIASEC Similarity'] +
-                top5['Normalized Education Score'] +
-                top5['User Skill Similarity']
-            )
-            top5 = top5.sort_values(by='Total', ascending=False).drop(columns='Total')
+            top5 = results.sort_values(by='Hybrid Recommendation Score', ascending=False).head(5).copy()
 
             # Melt the DataFrame for Altair
             melted = pd.melt(
@@ -232,6 +237,20 @@ if st.session_state.get('career_submitted'):
                 ],
                 var_name="Metric", value_name="Score"
             ) 
+             
+            # Hybrid Recommendation Chart
+            st.markdown("### 🧮 Final Hybrid Recommendation Score (Top 10)")
+
+            bar_chart = alt.Chart(results.head(10)).mark_bar().encode(
+                x=alt.X("Hybrid Recommendation Score:Q", title="Score"),
+                y=alt.Y("Title:N", sort='-x'),
+                tooltip=["Title", "Hybrid Recommendation Score"]
+            ).properties(
+                width=700,
+                height=400
+            )
+
+            st.altair_chart(bar_chart, use_container_width=True)
 
             # Altair chart with fixed colors
             chart = alt.Chart(melted).mark_bar().encode(
