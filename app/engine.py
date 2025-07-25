@@ -132,9 +132,11 @@ def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=
 
         # Return fallback
         return (
-            fallback_matches[['Title', 'Description', 'Education Level', 'Preparation Level',
-                              'Education Category Label', 'Fallback Score',
-                              'R', 'I', 'A', 'S', 'E', 'C']],
+            fallback_matches[[
+                "ONET_Code", "Title", "Description", "Education Level", "Preparation Level",
+                "Education Category Label", "Fallback Score",
+                "R", "I", "A", "S", "E", "C"
+            ]],
             {
                 "personalized_message": personalized_message,
                 "weights_used": {
@@ -147,16 +149,23 @@ def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=
 
     # --- FINAL RETURN ---
     return (
-        top_matches[['Title', 'Description', 'Education Level', 'Preparation Level',
-                     'Education Category Label', 'Hybrid Recommendation Score',
-                     'User RIASEC Similarity', 'Normalized Education Score', 'User Skill Similarity',
-                     'R', 'I', 'A', 'S', 'E', 'C']],
-        {
-            "personalized_message": personalized_message,
-            "weights_used": {
-                "RIASEC Weight": riasec_weight,
-                "Skill Weight": skill_weight,
-                "Education Weight": edu_weight
-            }
+    top_matches[[
+        "ONET_Code", "Title", "Description",
+        "Hybrid Recommendation Score",
+        "User RIASEC Similarity",
+        "User Skill Similarity",
+        "Education Level",
+        "Education Category Label",
+        "R", "I", "A", "S", "E", "C",
+        *[col for col in top_matches.columns if col.startswith("Skill List_")]  # Include skill columns
+    ]],
+    {
+        "personalized_message": personalized_message,
+        "weights_used": {
+            "RIASEC Weight": riasec_weight,
+            "Skill Weight": skill_weight,
+            "Education Weight": edu_weight
         }
-    )
+    }
+)
+
