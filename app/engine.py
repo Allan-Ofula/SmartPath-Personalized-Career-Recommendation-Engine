@@ -11,8 +11,8 @@ job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
 def get_encoded_skill_columns():
     try:
-        # Safer path: relative to working directory, not __file__
-        skills_path = Path("data/Skills.xlsx")
+        # Skills path
+        skills_path = Path(__file__).resolve().parent / "data" / "Skills.xlsx"
 
         if not skills_path.exists():
             raise FileNotFoundError(f"Skills file not found at: {skills_path.resolve()}")

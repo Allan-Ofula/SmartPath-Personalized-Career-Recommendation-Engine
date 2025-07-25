@@ -6,3 +6,4 @@ joblib
 altair
 plotly
 matplotlib
+openpyxl
