@@ -204,15 +204,40 @@ if st.session_state.get('career_submitted'):
             # --- Score Breakdown ---
             st.markdown("### 📊 Score Breakdown for Top 5 Jobs")
             top5 = results.head(5).copy()
-            melted = pd.melt(top5, id_vars=["Title"], value_vars=[
-                "User RIASEC Similarity", "Normalized Education Score", "User Skill Similarity"],
-                var_name="Metric", value_name="Score")
+
+            # Sort by total score to ensure meaningful bar order
+            top5['Total'] = (
+                top5['User RIASEC Similarity'] +
+                top5['Normalized Education Score'] +
+                top5['User Skill Similarity']
+            )
+            top5 = top5.sort_values(by='Total', ascending=False).drop(columns='Total')
+
+            # Melt the DataFrame for Altair
+            melted = pd.melt(
+                top5,
+                id_vars=["Title"],
+                value_vars=[
+                    "User RIASEC Similarity", 
+                    "Normalized Education Score", 
+                    "User Skill Similarity"
+                ],
+                var_name="Metric", value_name="Score"
+            ) 
+
+            # Altair chart with fixed colors
             chart = alt.Chart(melted).mark_bar().encode(
                 x=alt.X("Score:Q", stack="zero"),
                 y=alt.Y("Title:N", sort='-x'),
-                color="Metric:N",
+                color=alt.Color("Metric:N",
+                    scale=alt.Scale(
+                        domain=["User RIASEC Similarity", "Normalized Education Score", "User Skill Similarity"],
+                        range=["#1f77b4", "#2ca02c", "#d62728"]  # Blue, Green, Red
+                    )
+                ),
                 tooltip=["Title", "Metric", "Score"]
             ).properties(width="container", height=400)
+
             st.altair_chart(chart, use_container_width=True)
 
             # --- RIASEC Radar Chart ---

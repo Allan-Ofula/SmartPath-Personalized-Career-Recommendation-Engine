@@ -4,14 +4,16 @@ Empowering informed career decisions through intelligent, data-driven recommenda
 <p align="center">
   <img src="images/SmartPath_Career_Growth_Logo.png" alt="SmartPath Career Growth Logo" width="600"/>
 </p>
-Discover careers aligned with your strengths, passions, and education.  
 
-Powered by RIASEC Science and real-world job market data.
+**Discover careers aligned with your strengths, passions, and education.** 
+ Powered by RIASEC Science and real-world job market data.
 
 ## Overview
-SmartPath is a personalized career recommendation system that helps students, graduates, and job seekers, especially from underserved communities to discover careers aligned with their interests, skills, and education level, powered by the O*NET occupational database.
+SmartPath is an intelligent career recommender system designed to guide students, graduates, and job seekers toward ideal career paths aligned with their interests, skills, education and preferences. 
 
-Unlike generic career portals, SmartPath uses a hybrid similarity model plus machine learning insights to deliver custom career recommendations with actionable steps. helping users identify their best-fit occupations and the skills they need to thrive.
+Built using machine learning and interactive visualizations, this tool empowers learners and job seekers to make informed, personalized data-driven career decisions.
+
+Unlike generic career portals, SmartPath uses a hybrid similarity model to deliver actionable, custom-fit job recommendations, helping users identify their best-fit occupations and the skills they need to thrive.
 
 ---
 
@@ -24,14 +26,14 @@ Collects user input for:
 
 Computes:
 - Cosine similarity between user interests and occupational profiles
-- Skill match scores based on selected user strengths
-- Education gap analysis
+- Skill match scores based on user strengths
+- Education compatibility
 
 Outputs:
-- Top career matches with hybrid similarity scores
-- Matched skills and gaps
+- Top 10 personalized career matches
+- Skills match and education alignment
 - CSV export + optional email delivery
-- Summary visualization of top 3 job recommendations
+- Summary visualization of recommendations
 
 ---
 
@@ -47,21 +49,20 @@ SmartPath leverages curated occupational data from reliable public resources to 
 
 The datasets were cleaned, transformed, and combined into a unified job profile format (job_profiles_clean.csv) used for real-time matching.
 
-Cleaned Dataset Sample (hosted for testing/demo):./data/job_profiles_clean.csv
+Cleaned data sample: `./data/job_profiles_clean.csv`
 
 ---
 
 ## Tech Stack
 
-- **Python 3.10+**
-- **Pandas**, **NumPy**, **Scikit-learn**, **XGBoost**
-- **Matplotlib / Seaborn** for visualizations
-- **Jupyter Notebook** (Interactive prototyping)
-- **Streamlit** for future UI
-- **Email Integration**: via `smtplib` and `EmailMessage`
+- Python
+- Pandas & NumPy
+- Scikit-learn
+- Streamlit
+- Cosine Similarity (for recommender logic)
 
 ---
-## Models & Recommendation Engine Logic
+## Models & Recommendation Logic
 The core of SmartPath is a **hybrid similarity model** that blends statistical scoring and machine learning to ensure highly personalized career recommendations.
 
 - **Cosine Similarity**  
@@ -101,61 +102,107 @@ Supervised ML was used to predict likely job clusters or roles based on labeled 
 ## How It Works
 
 1. **User Input**  
-   The user provides RIASEC scores, top 3 skills (optional), and their highest education level via a simple interface.
-    - Inputs: RIASEC (6-dim), skills (3), education level
+   - RIASEC scores (6-dim), top 3 skills, education level
 
-2. **Profile Matching and Prediction Engine**  
-   The system compares the user profile to thousands of job profiles from O\*NET using cosine similarity and skill/education matching.
-    - Cosine Similarity: RIASEC vs. job interest vectors
-    - Skill Match: Intersection of user vs. role-required skills
-    - Education Match: Based on level mapping
+2. **Similarity Engine**  
+   - Cosine Similarity (RIASEC), Skill Match, Education Check
 
-3. **Recommendation Generation**  
-   Jobs are scored and ranked based on:
-   - RIASEC similarity (40%)
-   - Skill match (30%)
-   - Education alignment (30%)
+3. **Scoring & Filtering**  
+   - Education filter applied, weighted score calculated
 
-4. **Output Delivery**  
-   The top 10 jobs are displayed and saved in a CSV file. Users can also opt to receive the file via email.
-    - Top 10 career suggestions
-    - CSV export + optional emailing
-    - kill gap insights
+4. **Results Output**  
+   - Top 10 job matches, skill/education gaps, CSV export, email option
 
 ---
 
-## Additions
+ ## Deployment (SmartPath App)
+This project is deployed and accessible live via Streamlit Cloud.
+
+**[SmartPath Personalized Career Recommender](https://allan-ofula.streamlit.app/)**
+
+Explore the app, get your recommended career paths, and interact with insightful dashboards instantly!
+
+## Running the SmartPath App Locally
+Follow the steps below to run SmartPath locally:
+
+1. Clone this Repository
+```bash
+git clone https://github.com/Allan-Ofula/SmartPath-Personalized-Career-Recommendation-Engine.git
+cd SmartPath-Personalized-Career-Recommendation-Engine
+```
+
+2. **Install dependencies**:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. **Launch the Streamlit app**:
+
+```bash
+streamlit run app.py
+```
+
+4. **Access the app**:
+
+Visit `http://localhost:8501` in your browser.
+
+---
+
+## Project Structure
+
+```
+SmartPath/
+├── app.py
+├── recommender_engine.py
+├── data/
+│   └── job_profiles_clean.csv
+├── utils/
+├── requirements.txt
+└── README.md
+```
+## Features
+
+- Hybrid Recommendation System using RIASEC + Skills + Education
+- Tailored for the African job market
+- Interactive Streamlit dashboard for user input and insights
+- Recommender logic based on cosine similarity hybrid
+- Clean and modular code structure
+
+ ## Additions
+
 **1. User Feedback System**
+- Emoji/text-based feedback stored in feedback.csv
+- Optional feedback analytics dashboard
+- Future Slack/email alerts for admin
 
-Collects session-based, timestamped feedback via emoji rating or text (stored in feedback.csv)
-  - Optional chart dashboard of average feedback (Streamlit bar charts)
-  - Admin alert capability (Slack API or email)
-
-**2 Dashboard for Admin Insights**
-Visualizes user input trends, top recommended careers, and feedback distribution using interactive charts
+**2. Admin Dashboard**
+- Trends in user input, top jobs recommended
+- Feedback summary via Streamlit charts
 
 ---
+
 ## Future Improvements
-- Streamlit-based full UI with session login
-- Resume parsing for automated user input
-- Career progression pathway prediction
-- Geo-personalized recommendations based on local demand
-- NLP on job descriptions for deeper similarity scoring
+
+- Resume parsing for auto-input
+- Personalized career roadmap prediction
+- Geo-localized job relevance
+- Full user authentication (Streamlit + Firestore)
+- Advanced skill gap analysis using embeddings
 
 ---
 
 ## Acknowledgments
 We would like to express our sincere gratitude to:
 
-- Moringa School – for providing the learning foundation and project framework.
+- Moringa School – for mentorship, learning foundation and project framework.
 - O*NET (Occupational Information Network) – for the rich job dataset that powers this recommendation engine.
-- Career Development Theorists – especially John Holland, for the RIASEC model.
-- Our Moringa School instructors:
+- Career Development Theorists – especially John Holland (RIASEC model)
+
+Special thanks to our mentors and instructors:
    - Mildred Jepkosgei 
    - Brian Chacha
    - Antony Muiko
-
-for  the mentorship and support in fostering innovative talent.
 
 This work reflects a growing commitment to applying data science in empowering youth, career clarity, and digital transformation in Africa.
 
@@ -165,31 +212,33 @@ This work reflects a growing commitment to applying data science in empowering y
 
 **Rachael Nyawira**  
 Kenya | Data Science Learner | Passionate about using data to transform lives  
-Email:
-[GitHub](https://github.com/yourgithubusername) | [LinkedIn](https://www.linkedin.com/in/yourlinkedin/)
+[Email](rachaelnyawira614@gmail.com) |
+[GitHub](https://github.com/rachael-coder) | [LinkedIn](https://www.linkedin.com/in/yourlinkedin/)
 
 **Beryl Okelo**  
 Kenya | Data Science Learner | Passionate about using data to transform lives  
-Email: 
-[GitHub](https://github.com/yourgithubusername) | [LinkedIn](https://www.linkedin.com/in/yourlinkedin/)
+[Email](okelloakoth@gmail.com) |
+[GitHub](https://github.com/BAOKELO) | [LinkedIn](https://www.linkedin.com/in/berylokelo)
 
 **Beth Nyambura**  
 Kenya | Data Science Learner | Passionate about using data to transform lives  
-Email:  
-[GitHub](https://github.com/yourgithubusername) | [LinkedIn](https://www.linkedin.com/in/yourlinkedin/)
+[Email](lizshiru11@gmail.com) |
+[GitHub](https://github.com/betty254809) | [LinkedIn](https://www.linkedin.com/in/beth-nyambura-b3964b234/)
 
 **Allan Ofula**  
-Kenya | Data Science Associate | Youth Advocate | Developer of SmartPath | Passionate about using data to transform lives  
-[Email:] ofulaallan@gmail.com  
+Kenya | Data Scientist | Youth Advocate | Developer of SmartPath | Passionate about using data to transform lives  
+[Email](ofulaallan@gmail.com) |
 [GitHub](https://github.com/Allan-Ofula) | [LinkedIn](https://www.linkedin.com/in/allan-ofula-b2804911b/)
 
 **Eugene Maina**  
 Kenya | Data Science Learner | Passionate about using data to transform lives  
-Email: 
-[GitHub](https://github.com/yourgithubusername) | [LinkedIn](https://www.linkedin.com/in/yourlinkedin/)
+[Email](eugenemaina72@gmail.com) |   
+[GitHub](https://github.com/eugene-maina72) | [LinkedIn](https://www.linkedin.com/in/yourlinkedin/)
 
 ---
 
 ## Final Note
-SmartPath is more than a tool - it's a movement to democratize personalized, intelligent career guidance using the power of AI and open data, one youth at a time.
+*"SmartPath isn't just a project, it's a mission to democratize data-driven career guidance for youth across Africa and beyond. Powered by Data Science, AI, and open data, we're unlocking opportunities and building futures, one youth at a time."*
 
+## Contact
+Feel free to reach out or contribute ideas to improve the engine for greater impact!
