@@ -125,9 +125,12 @@ if st.session_state['name_submitted']:
         ], index=4)
 
         st.subheader("🛠️ Strong Skills (Select up to 5)")
-        from engine import get_encoded_skill_columns  # Making sure this function is defined
-
-        skill_options = get_encoded_skill_columns()  # Dynamically fetched from dataset
+        try:
+            from engine import get_encoded_skill_columns
+            skill_options = get_encoded_skill_columns()
+        except Exception as e:
+            st.error("Failed to load skill options.")
+            skill_options = []
 
         selected_skills = st.multiselect("Select your top skills", skill_options, max_selections=5)
 
@@ -196,7 +199,7 @@ if st.session_state.get('career_submitted'):
 
             st.markdown(f"""
                 <div style="background-color:#fff3cd;padding:15px;border-radius:10px;">
-                    <h2 style="color:#00796b;">🌟 Your Top Career Match: <span style="color:#d32f2f;">{top_job['Title']}</span></h2>
+                    <h2 style="color:#00796b;">🌟 Your Top Career Match: {top_job['Icon']} <span style="color:#d32f2f;">{top_job['Title']}</span></h2>
                     <p style="font-size:16px;">{top_job['Description'][:250]}...</p> 
                 </div> 
             """, unsafe_allow_html=True)
@@ -205,6 +208,15 @@ if st.session_state.get('career_submitted'):
             st.dataframe(
                 results.drop(columns=['R', 'I', 'A', 'S', 'E', 'C']),
                 use_container_width=True
+            )
+            
+            # Download button
+            csv = results.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="⬇️ Download Recommendations",
+                data=csv,
+                file_name="career_recommendations.csv",
+                mime='text/csv'
             )
 
             # Sort by total score to ensure meaningful bar order
@@ -337,7 +349,7 @@ if st.session_state.get('career_submitted'):
 
             # --- Optional Fun Career ---
             if st.checkbox("🎉 Surprise Career Match (just for fun!)"):
-                random_job = results.sample(1).iloc[0]
+                random_job = results[results["Title"] != top_job["Title"]].sample(1).iloc[0]
                 st.info(f"💡 **{random_job['Icon']} {random_job['Title']}**\n\n{random_job['Description'][:250]}...")
 
 # --- 📣 Feedback Section ---
@@ -404,9 +416,6 @@ with st.expander("📈 User Insights Dashboard"):
             st.line_chart(avg_scores.set_index(trait))
     else:
         st.info("No user usage data yet.")
-
-# --- User Dashboard ---
-st.markdown("### 📈 User Insights Dashboard")
 
 # --- Footer ---
 st.markdown("""  
