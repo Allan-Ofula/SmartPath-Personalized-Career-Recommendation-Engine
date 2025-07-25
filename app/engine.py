@@ -66,9 +66,23 @@ def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=
         skill_name = skill.replace("Skill List_", "").lower()
         if any(skill_name in s.lower() for s in user_skills):
             user_skill_vector[0][i] = 1
-
+    
+    # Job skill matrix
     job_skill_matrix = job_df[skill_cols].fillna(0).values
-    job_df['User Skill Similarity'] = cosine_similarity(user_skill_vector, job_skill_matrix)[0]
+
+    # Mask jobs that have no skill encoding
+    nonzero_job_mask = job_skill_matrix.sum(axis=1) != 0
+
+    # Initialize similarity array with zeros
+    skill_similarities = np.zeros(len(job_skill_matrix))
+
+    # Compute similarity only for jobs with valid skill data
+    skill_similarities[nonzero_job_mask] = cosine_similarity(
+        user_skill_vector, job_skill_matrix[nonzero_job_mask]
+    )[0]
+
+    # Assign similarity back to DataFrame
+    job_df['User Skill Similarity'] = skill_similarities
 
     # --- Final Hybrid weighted score ---
     job_df['Hybrid Recommendation Score'] = (
@@ -85,6 +99,25 @@ def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=
     personalized_message = f"Hi {user_name}, below are the careers that match your RIASEC scores, skills, and education level."
 
     # --- Return Output ---
+    # If user selected skills, filter out jobs with 0 skill similarity
+    if user_skills:
+        top_matches = top_matches[top_matches['User Skill Similarity'] > 0]
+    
+    # --- Handle users with no skills and no education ---
+    if not user_skills and user_profile.get("education_level") in [None, "", "Less than High School"]:
+        fallback_matches = job_profiles_clean.copy()
+
+        fallback_matches['Fallback Score'] = fallback_matches[riasec_cols].apply(
+            lambda row: np.dot(user_vector.flatten(), row.values), axis=1
+        )
+
+        fallback_matches = fallback_matches.sort_values('Fallback Score', ascending=False).head(10)
+
+        personalized_message = (
+            f"Hi {user_name}, based on your interests alone, here are job suggestions you may explore. "
+            "You currently have no recorded education or skills, but don’t worry – it’s a great starting point!"
+        )
+
     return (
         top_matches[[ 
             'Title', 'Description', 'Education Level', 'Preparation Level',
