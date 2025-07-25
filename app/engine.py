@@ -11,26 +11,30 @@ job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
 def get_encoded_skill_columns():
     """
-    Loads skills from Skills.xlsx using 'Element Name' where 'Scale ID' is 'IM' (Importance).
+    Extracts unique skill names from the 'Element Name' column of Skills.xlsx
+    and returns a cleaned list for multiselect.
     """
+    data_path = Path(__file__).parent / "data"
+    skills_file = data_path / "Skills.xlsx"
+
+    if not skills_file.exists():
+        print("❌ Skills.xlsx file not found.")
+        return []
+
     try:
-        data_path = Path(__file__).parent / "data" / "Skills.xlsx"
-        if not data_path.exists():
-            print("⚠️ Skills.xlsx file not found at", data_path)
-            return []
+        # Read Excel file
+        skills_df = pd.read_excel(skills_file)
 
-        df = pd.read_excel(data_path)
+        # Filter only the rows with Scale Name = 'Importance' (to avoid duplicates)
+        important_skills = skills_df[skills_df["Scale Name"] == "Importance"]
 
-        # Filter for rows where Scale ID is 'IM' (Importance)
-        importance_df = df[df["Scale ID"] == "IM"]
+        # Extract unique skill names from the 'Element Name' column
+        unique_skills = important_skills["Element Name"].dropna().unique()
 
-        # Extract unique Element Names (i.e., skill names)
-        skill_names = sorted(importance_df["Element Name"].dropna().unique())
-
-        return skill_names
-
+        # Sort alphabetically
+        return sorted(unique_skills)
     except Exception as e:
-        print(f"❌ Failed to load skills from Skills.xlsx: {e}")
+        print(f"❌ Failed to read or process Skills.xlsx: {e}")
         return []
 
 # --- START FUNCTION ---
