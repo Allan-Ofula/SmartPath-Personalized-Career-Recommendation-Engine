@@ -6,19 +6,28 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Load cleaned job profiles data
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
-# Hybrid recommender function: RIASEC + Education + Skills (Kenya-Job Market optimized Recommender)
+def get_encoded_skill_columns():
+    data_path = Path(__file__).parent / "data"
+    skills_df = pd.read_excel(data_path / "Skills.xlsx")
+
+    # Filter only relevant columns (those that are one-hot encoded)
+    encoded_columns = [col for col in skills_df.columns if col.startswith("Skill List_")]
+    
+    # Clean up column names for display
+    return [col.replace("Skill List_", "").strip() for col in encoded_columns]
+
+# --- START FUNCTION ---
 def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=0.5, edu_weight=0.1):
     global job_profiles_clean
-
     job_df = job_profiles_clean.copy()
 
-    # --- RIASEC similarity ---
+    # --- 1. RIASEC SIMILARITY ---
     riasec_cols = ['R', 'I', 'A', 'S', 'E', 'C']
     user_vector = np.array([user_profile.get(code, 0) for code in riasec_cols]).reshape(1, -1)
     job_vectors = job_df[riasec_cols].values
     job_df['User RIASEC Similarity'] = cosine_similarity(user_vector, job_vectors)[0]
 
-    # --- Education normalization ---
+    # --- 2. EDUCATION NORMALIZATION ---
     edu_mapping = {
         "Less than High School": 1,
         "High School Diploma or Equivalent": 2,
@@ -30,7 +39,7 @@ def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=
         "Post-Doctoral Training": 8
     }
 
-    # Normalize inconsistent education labels in dataset
+    # Place label_normalization dictionary here
     label_normalization = {
         "Less than High School": "Less than High School",
         "High School Diploma or equivalent": "High School Diploma or Equivalent",
@@ -45,66 +54,60 @@ def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=
         "Post-Doctoral Training": "Post-Doctoral Training"
     }
 
-    # Apply normalization
+    # Normalize job education levels
     job_df['Normalized Education Category'] = job_df['Education Category Label'].map(label_normalization)
     job_df['Education Numeric'] = job_df['Normalized Education Category'].map(edu_mapping).fillna(1)
 
-    # Calculate normalized score
     max_edu_score = max(edu_mapping.values())
     user_edu_score = edu_mapping.get(user_profile.get('education_level'), 1)
     job_df['Normalized Education Score'] = job_df['Education Numeric'] / max_edu_score
 
-    # 🔴 FILTER: Only jobs the user qualifies for (education level)
+    #  FILTER JOBS THE USER IS QUALIFIED FOR:
     job_df = job_df[job_df['Education Numeric'] <= user_edu_score]
 
-    # --- Skill similarity ---
-    skill_cols = [col for col in job_df.columns if col.startswith("Skill List_")]
-    user_skills = user_profile.get('skills', [])
-    user_skill_vector = np.zeros((1, len(skill_cols)))
+    # --- 3. SKILL SIMILARITY ---
+    user_selected_skills = user_profile.get("skills", [])
 
-    for i, skill in enumerate(skill_cols):
-        skill_name = skill.replace("Skill List_", "").lower()
-        if any(skill_name in s.lower() for s in user_skills):
-            user_skill_vector[0][i] = 1
-    
-    # Job skill matrix
+    # Ensure case-insensitive comparison
+    skill_cols = [col for col in job_profiles_clean.columns if col.startswith("Skill List_")]
+    user_skill_vector = np.array([
+        1.0 if col.replace("Skill List_", "").lower() in [s.lower() for s in user_selected_skills] else 0.0
+        for col in skill_cols
+    ]).reshape(1, -1)
+
     job_skill_matrix = job_df[skill_cols].fillna(0).values
 
-    # Mask jobs that have no skill encoding
+    # Avoid NaN by masking jobs with 0 total skills
     nonzero_job_mask = job_skill_matrix.sum(axis=1) != 0
+    skill_similarities = np.zeros(len(job_df))
 
-    # Initialize similarity array with zeros
-    skill_similarities = np.zeros(len(job_skill_matrix))
+    if np.any(user_skill_vector):  # If user selected any skills
+        skill_similarities[nonzero_job_mask] = cosine_similarity(
+            job_skill_matrix[nonzero_job_mask], user_skill_vector
+        ).flatten()
 
-    # Compute similarity only for jobs with valid skill data
-    skill_similarities[nonzero_job_mask] = cosine_similarity(
-        user_skill_vector, job_skill_matrix[nonzero_job_mask]
-    )[0]
+    job_df["User Skill Similarity"] = skill_similarities
 
-    # Assign similarity back to DataFrame
-    job_df['User Skill Similarity'] = skill_similarities
-
-    # --- Final Hybrid weighted score ---
+    # --- 4. FINAL HYBRID SCORE ---
     job_df['Hybrid Recommendation Score'] = (
         (riasec_weight * job_df['User RIASEC Similarity']) +
         (skill_weight * job_df['User Skill Similarity']) +
         (edu_weight * job_df['Normalized Education Score'])
     )
 
-    # --- Top 10 matches ---
+    # --- 5. TOP MATCHES ---
     top_matches = job_df.sort_values('Hybrid Recommendation Score', ascending=False).head(10)
 
-    # --- Personalized Message (for UI) ----
+    # --- 6. PERSONALIZED UI MESSAGE ---
     user_name = user_profile.get('user_name', 'User')
     personalized_message = f"Hi {user_name}, below are the careers that match your RIASEC scores, skills, and education level."
 
-    # --- Return Output ---
-    # If user selected skills, filter out jobs with 0 skill similarity
-    if user_skills:
+    # --- 7. FILTER OUT NON-MATCHING SKILL JOBS (optional) ---
+    if user_selected_skills:
         top_matches = top_matches[top_matches['User Skill Similarity'] > 0]
-    
-    # --- Handle users with no skills and no education ---
-    if not user_skills and user_profile.get("education_level") in [None, "", "Less than High School"]:
+
+    # --- 8. FALLBACK (NO SKILLS & LOW EDUCATION) ---
+    if not user_selected_skills and user_profile.get("education_level") in [None, "", "Less than High School"]:
         fallback_matches = job_profiles_clean.copy()
 
         fallback_matches['Fallback Score'] = fallback_matches[riasec_cols].apply(
@@ -118,13 +121,27 @@ def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=
             "You currently have no recorded education or skills, but don’t worry – it’s a great starting point!"
         )
 
+        # Return fallback
+        return (
+            fallback_matches[['Title', 'Description', 'Education Level', 'Preparation Level',
+                              'Education Category Label', 'Fallback Score',
+                              'R', 'I', 'A', 'S', 'E', 'C']],
+            {
+                "personalized_message": personalized_message,
+                "weights_used": {
+                    "RIASEC Weight": riasec_weight,
+                    "Skill Weight": skill_weight,
+                    "Education Weight": edu_weight
+                }
+            }
+        )
+
+    # --- FINAL RETURN ---
     return (
-        top_matches[[ 
-            'Title', 'Description', 'Education Level', 'Preparation Level',
-            'Education Category Label', 'Hybrid Recommendation Score',
-            'User RIASEC Similarity', 'Normalized Education Score', 'User Skill Similarity',
-            'R', 'I', 'A', 'S', 'E', 'C'
-        ]],
+        top_matches[['Title', 'Description', 'Education Level', 'Preparation Level',
+                     'Education Category Label', 'Hybrid Recommendation Score',
+                     'User RIASEC Similarity', 'Normalized Education Score', 'User Skill Similarity',
+                     'R', 'I', 'A', 'S', 'E', 'C']],
         {
             "personalized_message": personalized_message,
             "weights_used": {

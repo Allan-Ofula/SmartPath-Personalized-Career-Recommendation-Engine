@@ -125,22 +125,10 @@ if st.session_state['name_submitted']:
         ], index=4)
 
         st.subheader("🛠️ Strong Skills (Select up to 5)")
-        skill_options = ["Data Analysis", "Communication", "Problem Solving", "Project Management", "Creativity",
-            "Critical Thinking", "Leadership", "Teamwork", "Technical Writing", "Machine Learning",
-            "SQL", "Python", "R", "Tableau", "Excel", "Public Speaking", "Negotiation", "Sales",
-            "Graphic Design", "Customer Service", "Financial Literacy", "Coding", "UX/UI Design",
-            "Time Management", "Oral Comprehension", "Written Comprehension", "Originality",
-            "Deductive Reasoning", "Inductive Reasoning", "Flexibility of Closure", "Visualization",
-            "Reaction Time", "Speech Clarity", "Reading Comprehension", "Active Listening", "Writing",
-            "Speaking", "Mathematics", "Science", "Active Learning", "Learning Strategies",
-            "Monitoring", "Social Perceptiveness", "Coordination", "Persuasion", "Instructing",
-            "Service Orientation", "Complex Problem Solving", "Operations Analysis", "Technology Design",
-            "Equipment Selection", "Installation", "Programming", "Operations Monitoring",
-            "Operation and Control", "Equipment Maintenance", "Troubleshooting", "Repairing",
-            "Quality Control Analysis", "Judgment and Decision Making", "Systems Analysis",
-            "Systems Evaluation", "Management of Financial Resources", "Management of Material Resources",
-            "Management of Personnel Resources"
-        ]
+        from engine import get_encoded_skill_columns  # Making sure this function is defined
+
+        skill_options = get_encoded_skill_columns()  # Dynamically fetched from dataset
+
         selected_skills = st.multiselect("Select your top skills", skill_options, max_selections=5)
 
         # Validation
