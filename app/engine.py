@@ -11,19 +11,25 @@ job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
 def get_encoded_skill_columns():
     try:
-        # Skills path
         skills_path = Path(__file__).resolve().parent / "data" / "Skills.xlsx"
-
-        if not skills_path.exists():
-            raise FileNotFoundError(f"Skills file not found at: {skills_path.resolve()}")
-
         skills_df = pd.read_excel(skills_path)
-        encoded_columns = [col for col in skills_df.columns if col.startswith("Skill List_")]
-        return [col.replace("Skill List_", "").strip() for col in encoded_columns]
+
+        print("[DEBUG] Columns in Skills.xlsx:", skills_df.columns.tolist())
+
+        # Flexible matching: Try multiple common prefixes
+        encoded_columns = [col for col in skills_df.columns if any(
+            col.startswith(prefix) for prefix in ["Skill List_", "Skill_", "Skill "])]
+
+        # Fallback: use all columns
+        if not encoded_columns:
+            encoded_columns = skills_df.columns.tolist()
+
+        print("[DEBUG] Final skill columns:", encoded_columns)
+
+        return [col.replace("Skill List_", "").replace("Skill_", "").strip() for col in encoded_columns]
 
     except Exception as e:
         print(f"[ERROR] Could not load skills: {e}")
-        traceback.print_exc()
         return []
 
 # --- START FUNCTION ---
