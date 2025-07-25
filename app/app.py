@@ -219,10 +219,6 @@ if st.session_state.get('career_submitted'):
                 use_container_width=True
             )
 
-            # --- Score Breakdown ---
-            st.markdown("### 📊 Score Breakdown for Top 5 Jobs")
-            top5 = results.head(5).copy()
-
             # Sort by total score to ensure meaningful bar order
             top5 = results.sort_values(by='Hybrid Recommendation Score', ascending=False).head(5).copy()
 
@@ -252,8 +248,25 @@ if st.session_state.get('career_submitted'):
 
             st.altair_chart(bar_chart, use_container_width=True)
 
+            # --- Optional Filters ---
+            st.markdown("### 🎛️ Filter Score Breakdown")
+
+            metric_filter = st.selectbox(
+                "Select which metric to display",
+                ["All", "User RIASEC Similarity", "Normalized Education Score", "User Skill Similarity"]
+            )
+
+            if metric_filter != "All":
+                filtered_data = melted[melted["Metric"] == metric_filter]
+            else:
+                filtered_data = melted
+
+            # --- Score Breakdown ---
+            st.markdown("### 📊 Score Breakdown for Top 5 Jobs")
+            top5 = results.head(5).copy()
+            
             # Altair chart with fixed colors
-            chart = alt.Chart(melted).mark_bar().encode(
+            chart = alt.Chart(filtered_data).mark_bar().encode(
                 x=alt.X("Score:Q", stack="zero"),
                 y=alt.Y("Title:N", sort='-x'),
                 color=alt.Color("Metric:N",
@@ -266,6 +279,21 @@ if st.session_state.get('career_submitted'):
             ).properties(width="container", height=400)
 
             st.altair_chart(chart, use_container_width=True)
+
+            # --- Auto-Generated Interpretation ---
+            st.markdown("### 📘 Interpretation")
+
+            score_means = top5[[
+                "User RIASEC Similarity", 
+                "Normalized Education Score", 
+                "User Skill Similarity"
+            ]].mean().round(2)
+
+            best_metric = score_means.idxmax()
+            st.info(f"Your strongest matching factor across the top jobs is **{best_metric}** (average score: {score_means[best_metric]})")
+
+            weakest_metric = score_means.idxmin()
+            st.warning(f"The lowest average contributor is **{weakest_metric}**. Consider improving this area to unlock more opportunities.")
 
             # --- RIASEC Radar Chart ---
             st.markdown("### 🧭 Your RIASEC Personality Fit vs. Top Career")
