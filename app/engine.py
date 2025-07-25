@@ -10,32 +10,20 @@ import os
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
 def get_encoded_skill_columns():
-    """
-    Extracts unique skill names from the 'Element Name' column of Skills.xlsx
-    and returns a cleaned list for multiselect.
-    """
-    data_path = Path(__file__).parent / "data"
-    skills_file = data_path / "Skills.xlsx"
+    # Use absolute path from project root
+    skills_path = Path(__file__).resolve().parent.parent / "data" / "Skills.xlsx"
 
-    if not skills_file.exists():
+    if not skills_path.exists():
         print("❌ Skills.xlsx file not found.")
         return []
 
-    try:
-        # Read Excel file
-        skills_df = pd.read_excel(skills_file)
+    skills_df = pd.read_excel(skills_path)
 
-        # Filter only the rows with Scale Name = 'Importance' (to avoid duplicates)
-        important_skills = skills_df[skills_df["Scale Name"] == "Importance"]
+    # Filter skills with 'Importance' scale
+    important_skills_df = skills_df[skills_df["Scale ID"] == "IM"]
+    encoded_columns = sorted(important_skills_df["Element Name"].unique().tolist())
 
-        # Extract unique skill names from the 'Element Name' column
-        unique_skills = important_skills["Element Name"].dropna().unique()
-
-        # Sort alphabetically
-        return sorted(unique_skills)
-    except Exception as e:
-        print(f"❌ Failed to read or process Skills.xlsx: {e}")
-        return []
+    return encoded_columns
 
 # --- START FUNCTION ---
 def hybrid_similarity_recommender(user_profile, riasec_weight=0.4, skill_weight=0.5, edu_weight=0.1):
