@@ -205,13 +205,12 @@ if st.session_state.get('career_submitted'):
             """, unsafe_allow_html=True)
 
             st.markdown("### 📌 Top Career Matches")
-            st.dataframe(
-                results.drop(columns=['R', 'I', 'A', 'S', 'E', 'C']),
-                use_container_width=True
-            )
-            
+            visible_results = results.drop(columns=['R', 'I', 'A', 'S', 'E', 'C'])
+            st.dataframe(visible_results, use_container_width=True)
+
             # Download button
-            csv = results.to_csv(index=False).encode('utf-8')
+        with st.container():
+            csv = visible_results.to_csv(index=False).encode('utf-8')
             st.download_button(
                 label="⬇️ Download Recommendations",
                 data=csv,

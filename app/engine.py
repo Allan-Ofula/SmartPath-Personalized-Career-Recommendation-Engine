@@ -4,16 +4,23 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from pathlib import Path
 import traceback
+import os
 
 # Load cleaned job profiles data
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
 def get_encoded_skill_columns():
     try:
-        data_path = Path(__file__).parent / "data"
-        skills_df = pd.read_excel(data_path / "Skills.xlsx")
+        # Safer path: relative to working directory, not __file__
+        skills_path = Path("data/Skills.xlsx")
+
+        if not skills_path.exists():
+            raise FileNotFoundError(f"Skills file not found at: {skills_path.resolve()}")
+
+        skills_df = pd.read_excel(skills_path)
         encoded_columns = [col for col in skills_df.columns if col.startswith("Skill List_")]
         return [col.replace("Skill List_", "").strip() for col in encoded_columns]
+
     except Exception as e:
         print(f"[ERROR] Could not load skills: {e}")
         traceback.print_exc()
