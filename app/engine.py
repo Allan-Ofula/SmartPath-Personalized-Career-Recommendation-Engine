@@ -11,29 +11,26 @@ job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
 
 def get_encoded_skill_columns():
     """
-    Loads skill names from Skills.xlsx and returns a cleaned list of skill options.
+    Loads skills from Skills.xlsx using 'Element Name' where 'Scale ID' is 'IM' (Importance).
     """
     try:
-        # Locate Skills.xlsx in data folder
         data_path = Path(__file__).parent / "data" / "Skills.xlsx"
-        
         if not data_path.exists():
-            print("⚠️ Skills.xlsx not found at:", data_path)
+            print("⚠️ Skills.xlsx file not found at", data_path)
             return []
 
-        # Load Excel file
-        skills_df = pd.read_excel(data_path)
+        df = pd.read_excel(data_path)
 
-        # Filter columns that start with 'Skill List_'
-        encoded_columns = [col for col in skills_df.columns if col.startswith("Skill List_")]
+        # Filter for rows where Scale ID is 'IM' (Importance)
+        importance_df = df[df["Scale ID"] == "IM"]
 
-        # Extract and clean skill names
-        skill_names = [col.replace("Skill List_", "").strip() for col in encoded_columns]
+        # Extract unique Element Names (i.e., skill names)
+        skill_names = sorted(importance_df["Element Name"].dropna().unique())
 
         return skill_names
 
     except Exception as e:
-        print("❌ Error loading skills:", e)
+        print(f"❌ Failed to load skills from Skills.xlsx: {e}")
         return []
 
 # --- START FUNCTION ---

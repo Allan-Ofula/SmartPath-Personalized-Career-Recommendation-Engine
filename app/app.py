@@ -125,6 +125,7 @@ if st.session_state['name_submitted']:
         ], index=4)
 
         st.subheader("🛠️ Strong Skills (Select up to 5)")
+
         try:
             from engine import get_encoded_skill_columns
             skills_list = get_encoded_skill_columns()
@@ -132,7 +133,16 @@ if st.session_state['name_submitted']:
             st.error(f"❌ Failed to load skill options: {e}")
             skills_list = []
             
-        selected_skills = st.multiselect("Select your top skills", skills_list, max_selections=5)
+        # Show the multiselect only if skills were loaded
+        if skills_list:
+            selected_skills = st.multiselect(
+                "Select your top skills",
+                skills_list,
+                max_selections=5
+            )
+        else:
+            st.warning("⚠️ No skills found to display. Please check the Skills.xlsx file.")
+            selected_skills = []
 
         # Validation
         if len(selected_skills) == 0:
