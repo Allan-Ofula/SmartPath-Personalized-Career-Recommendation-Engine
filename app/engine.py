@@ -5,8 +5,26 @@ import numpy as np
 from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Load job profiles with RIASEC and skill columns
+# Load job profiles
 job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
+
+# --- Utility: Clean Duplicate Skill Columns ---
+def clean_duplicate_skill_columns(df):
+    import re
+    skill_cols = df.columns[df.columns.str.startswith("Skill List_")]
+    base_names = [re.sub(r'(_x|_y)$', '', col) for col in skill_cols]
+
+    final_cols = {}
+    for col, base in zip(skill_cols, base_names):
+        if base not in final_cols:
+            final_cols[base] = col
+
+    base_skill_df = df[[final_cols[base] for base in final_cols]].copy()
+    base_skill_df.columns = list(final_cols.keys())
+
+    df = df.drop(columns=skill_cols, errors='ignore')
+    df = pd.concat([df, base_skill_df], axis=1)
+    return df
 
 # --- 1. Load and Prepare Skills Data ---
 def load_and_prepare_skills_data():
@@ -19,16 +37,12 @@ def load_and_prepare_skills_data():
     skills_path = base_path / "data" / "Skills.xlsx"
     skills_df = pd.read_excel(skills_path)
 
-    # Filter to only relevant skill rows
     if 'Element Name' not in skills_df.columns or skills_df['Element Name'].isna().all():
         raise ValueError("Skills.xlsx doesn't contain usable 'Element Name' data.")
 
     relevant_skills = skills_df[skills_df['Element Name'].notna()]
 
-    # Pivot to wide format
     skills_wide = relevant_skills.pivot_table(index="ONET_Code", columns="Element Name", values="Data Value", fill_value=0)
-
-    # Rename columns to avoid name clashes
     skills_wide = skills_wide.rename(columns=lambda x: f"Skill List_{x}" if x != "ONET_Code" else x)
 
     return skills_wide.reset_index()
@@ -37,6 +51,7 @@ def load_and_prepare_skills_data():
 def merge_skills_into_profiles():
     skills_data = load_and_prepare_skills_data()
     merged = pd.merge(job_profiles_clean, skills_data, how="left", left_on="ONET_Code_x", right_on="ONET_Code")
+    merged = clean_duplicate_skill_columns(merged)
     return merged
 
 # --- 3. Extract Skill Columns Dynamically ---
@@ -49,31 +64,26 @@ def get_encoded_skill_columns():
 def hybrid_similarity_recommender(user_profile, top_n=10):
     df = merge_skills_into_profiles()
 
-    # Extract skill columns
     skill_cols = [col for col in df.columns if col.startswith("Skill List_")]
     riasec_cols = ['R', 'I', 'A', 'S', 'E', 'C']
 
-    # Prepare vectors
     df_riasec = df[riasec_cols].fillna(0).values
     user_riasec = np.array([user_profile.get(code, 0) for code in riasec_cols]).reshape(1, -1)
-
     riasec_similarity = cosine_similarity(df_riasec, user_riasec).flatten()
 
     if user_profile["skills"]:
-        # Match only skills in the encoded columns
         selected_skills = [f"Skill List_{skill}" for skill in user_profile["skills"] if f"Skill List_{skill}" in skill_cols]
 
         if selected_skills:
             df_skills = df[selected_skills].fillna(0).values
-            user_skills = np.ones((1, len(selected_skills)))  # assumes equal weight
-
+            user_skills = np.ones((1, len(selected_skills)))  # equal weight
             skill_similarity = cosine_similarity(df_skills, user_skills).flatten()
         else:
             skill_similarity = np.zeros(len(df))
     else:
         skill_similarity = np.zeros(len(df))
 
-    # Encode education level numerically
+    # Encode education level
     education_order = [
         "Less than High School", "High School", "Some College",
         "Associate's Degree", "Bachelor's Degree", "Master's Degree", "Doctoral Degree"
@@ -82,15 +92,12 @@ def hybrid_similarity_recommender(user_profile, top_n=10):
     job_edu = df["Education Level"].apply(lambda x: education_order.index(x) if x in education_order else 0)
     education_match = 1 - abs(job_edu - user_edu) / len(education_order)
 
-    # Combine similarities (weights can be adjusted)
     final_score = 0.5 * riasec_similarity + 0.3 * skill_similarity + 0.2 * education_match
-
     df["Score"] = final_score
 
-    # Sort and format results
     top_matches = df.sort_values("Score", ascending=False).head(top_n)
 
-    return top_matches[[
+    return top_matches[[ 
         "Title", "Description", "Score", "Education Level",
         "R", "I", "A", "S", "E", "C"
     ]], {
@@ -99,7 +106,7 @@ def hybrid_similarity_recommender(user_profile, top_n=10):
         "personalized_message": f"Hello {user_profile.get('user_name', 'there')}, here are your top {top_n} job matches based on your RIASEC, skills, and education!"
     }
 
-# --- Example usage (for testing) ---
+# --- Example usage ---
 if __name__ == "__main__":
     sample_profile = {
         "user_name": "Allan",
