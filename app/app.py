@@ -1,4 +1,3 @@
-# --- Required Libraries ---
 from engine import hybrid_similarity_recommender
 
 import streamlit as st
@@ -125,24 +124,23 @@ if st.session_state['name_submitted']:
         ], index=4)
 
         st.subheader("🛠️ Strong Skills (Select up to 5)")
-
-        try:
-            from engine import get_encoded_skill_columns
-            skills_list = get_encoded_skill_columns()
-        except Exception as e:
-            st.error(f"❌ Failed to load skill options: {e}")
-            skills_list = []
-            
-        # Show the multiselect only if skills were loaded
-        if skills_list:
-            selected_skills = st.multiselect(
-                "Select your top skills",
-                skills_list,
-                max_selections=5
-            )
-        else:
-            st.warning("⚠️ No skills found to display. Please check the Skills.xlsx file.")
-            selected_skills = []
+        skill_options = ["Data Analysis", "Communication", "Problem Solving", "Project Management", "Creativity",
+            "Critical Thinking", "Leadership", "Teamwork", "Technical Writing", "Machine Learning",
+            "SQL", "Python", "R", "Tableau", "Excel", "Public Speaking", "Negotiation", "Sales",
+            "Graphic Design", "Customer Service", "Financial Literacy", "Coding", "UX/UI Design",
+            "Time Management", "Oral Comprehension", "Written Comprehension", "Originality",
+            "Deductive Reasoning", "Inductive Reasoning", "Flexibility of Closure", "Visualization",
+            "Reaction Time", "Speech Clarity", "Reading Comprehension", "Active Listening", "Writing",
+            "Speaking", "Mathematics", "Science", "Active Learning", "Learning Strategies",
+            "Monitoring", "Social Perceptiveness", "Coordination", "Persuasion", "Instructing",
+            "Service Orientation", "Complex Problem Solving", "Operations Analysis", "Technology Design",
+            "Equipment Selection", "Installation", "Programming", "Operations Monitoring",
+            "Operation and Control", "Equipment Maintenance", "Troubleshooting", "Repairing",
+            "Quality Control Analysis", "Judgment and Decision Making", "Systems Analysis",
+            "Systems Evaluation", "Management of Financial Resources", "Management of Material Resources",
+            "Management of Personnel Resources"
+        ]
+        selected_skills = st.multiselect("Select your top skills", skill_options, max_selections=5)
 
         # Validation
         if len(selected_skills) == 0:
@@ -172,194 +170,228 @@ if st.session_state.get('career_submitted'):
         time.sleep(0.05)
 
     user_profile = st.session_state['form_data']
+
     try:
-        results = hybrid_similarity_recommender(user_profile)
-        if isinstance(results, tuple): results = results[0]
-
-        icons = {"Manager": "👔", "Developer": "💻", "Analyst": "📊", "Engineer": "🛠️", "Teacher": "📚", 
-                 "Designer": "🎨", "Scientist": "🔬", "Doctor": "🩺", "Nurse": "👩‍⚕️", "Technician": "🔧", 
-                 "Consultant": "🧠"}
-        def get_icon(title):
-            for keyword, icon in icons.items():
-                if keyword.lower() in title.lower():
-                    return icon
-            return "💼"
-
-        if isinstance(results, pd.DataFrame):
-            if not results.empty and 'Title' in results.columns and 'Description' in results.columns:
-                if "Final Score" in results.columns:
-                    results = results.sort_values(by="Final Score", ascending=False).reset_index(drop=True)
-                results['Icon'] = results['Title'].apply(get_icon)
-                top_job = results.iloc[0]
-            else:
-                st.error("⚠️ Results missing required columns.")
-                st.stop()
-        else:
-            st.error("⚠️ Unexpected data format. Please try again or contact support.")
-            st.stop()
-
+        results, meta = hybrid_similarity_recommender(user_profile)
     except Exception as e:
         st.error("⚠️ Unexpected error occurred during recommendation generation.")
         st.exception(e)
+        st.stop()
+
+    if not isinstance(results, pd.DataFrame):
+        st.error("⚠️ Recommendation output is not a valid DataFrame.")
+        st.stop()
+
+    if not isinstance(meta, dict):
+        st.error("⚠️ Metadata output is not a valid dictionary.")
+        st.stop()
+
+    st.success(meta.get("personalized_message", "Recommendations generated successfully."))
+
+    icons = {
+        "Manager": "👔", "Developer": "💻", "Analyst": "📊", "Engineer": "🛠️", "Teacher": "📚", 
+        "Designer": "🎨", "Scientist": "🔬", "Doctor": "🩺", "Nurse": "👩‍⚕️", "Technician": "🔧", 
+        "Consultant": "🧠"
+    }
+    def get_icon(title):
+        for keyword, icon in icons.items():
+            if keyword.lower() in title.lower():
+                return icon
+        return "💼"
+
+    if not results.empty and 'Title' in results.columns and 'Description' in results.columns:
+        if "Final Score" in results.columns:
+            results = results.sort_values(by="Final Score", ascending=False).reset_index(drop=True)
+        results['Icon'] = results['Title'].apply(get_icon)
+        top_job = results.iloc[0]
     else:
-        if results.empty:
-            st.warning("No matching jobs found. Try adjusting your input.")
+        st.error("⚠️ Results missing required columns.")
+        st.stop()
+
+    if results.empty:
+        st.warning("No matching jobs found. Try adjusting your input.")
+    else:
+        st.success(f"🎯 Hi {user_profile['user_name']}, here are your top careers matches based on your interests, skills, and education level.")
+
+        st.markdown(f"""
+            <div style="background-color:#fff3cd;padding:15px;border-radius:10px;">
+                <h2 style="color:#00796b;">🌟 Your Top Career Match: <span style="color:#d32f2f;">{top_job['Title']}</span></h2>
+                <p style="font-size:16px;">{top_job['Description'][:250]}...</p> 
+            </div> 
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### 📌 Top Career Matches")
+        columns_to_drop = [col for col in ['R', 'I', 'A', 'S', 'E', 'C'] if col in results.columns]
+        st.dataframe(results.drop(columns=columns_to_drop), use_container_width=True)
+
+
+        # --- Sort by score and prepare top 5 ---
+        top5 = results.sort_values(by='Hybrid Recommendation Score', ascending=False).head(10).copy()
+
+        st.subheader("📊 Score Breakdown for Top 5 Jobs")
+
+        # Define expected scoring columns
+        expected_metrics = [
+            "User RIASEC Similarity",
+            "Normalized Education Score",
+            "User Skill Similarity"
+        ]
+
+        # Check which of the expected metrics exist in the top5 DataFrame
+        available_metrics = [col for col in expected_metrics if col in top5.columns]
+
+        if not expected_metrics :
+            st.warning("⚠️ No score metrics available to display.")
+        
         else:
-            st.success(f"🎯 Hi {user_name}, here are your top careers matches based on your interests, skills, and education level.")
-
-            st.markdown(f"""
-                <div style="background-color:#fff3cd;padding:15px;border-radius:10px;">
-                    <h2 style="color:#00796b;">🌟 Your Top Career Match: {top_job['Icon']} <span style="color:#d32f2f;">{top_job['Title']}</span></h2>
-                    <p style="font-size:16px;">{top_job['Description'][:250]}...</p> 
-                </div> 
-            """, unsafe_allow_html=True)
-
-            st.markdown("### 📌 Top Career Matches")
-            visible_results = results.drop(columns=['R', 'I', 'A', 'S', 'E', 'C'])
-            st.dataframe(visible_results, use_container_width=True)
-
-            # Download button
-        with st.container():
-            csv = visible_results.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="⬇️ Download Recommendations",
-                data=csv,
-                file_name="career_recommendations.csv",
-                mime='text/csv'
-            )
-
-            # Sort by total score to ensure meaningful bar order
-            top5 = results.sort_values(by='Hybrid Recommendation Score', ascending=False).head(5).copy()
-
-            # Melt the DataFrame for Altair
+            # Compute average score per metric across top 5 jobs
             melted = pd.melt(
                 top5,
                 id_vars=["Title"],
-                value_vars=[
-                    "User RIASEC Similarity", 
-                    "Normalized Education Score", 
-                    "User Skill Similarity"
-                ],
-                var_name="Metric", value_name="Score"
-            ) 
-             
-            # Hybrid Recommendation Chart
-            st.markdown("### 🧮 Final Hybrid Recommendation Score (Top 10)")
-
-            bar_chart = alt.Chart(results.head(10)).mark_bar().encode(
-                x=alt.X("Hybrid Recommendation Score:Q", title="Score"),
-                y=alt.Y("Title:N", sort='-x'),
-                tooltip=["Title", "Hybrid Recommendation Score"]
-            ).properties(
-                width=700,
-                height=400
+                value_vars=available_metrics,
+                var_name="Metric",
+                value_name="Score"
             )
 
-            st.altair_chart(bar_chart, use_container_width=True)
+        # Interpretation note
+        st.info("📘 Interpretation:\n"
+                "- Higher values indicate stronger alignment between your profile and the job's requirements.\n"
+                "- 'User RIASEC Similarity' shows how well your interests align.\n"
+                "- 'User Skill Similarity' reflects match with selected skills.\n"
+                "- 'Normalized Education Score' adjusts your education level to job expectations.")
 
-            # --- Optional Filters ---
-            st.markdown("### 🎛️ Filter Score Breakdown")
+        # Hybrid Recommendation Chart
+        st.markdown("### 🧮 Final Hybrid Recommendation Score (Top 10)")
+        chart = alt.Chart(melted).mark_bar().encode(
+        x=alt.X('Score:Q', title='Score', scale=alt.Scale(domain=[0, 1])),
+        y=alt.Y('Title:N', sort='-x', title='Career Title'),
+        color='Metric:N',
+        tooltip=['Title', 'Metric', 'Score']
+    ).properties(
+        width=700,
+        height=300,
+        title='📊 Score Breakdown for Top 5 Career Matches'
+    )
 
-            metric_filter = st.selectbox(
-                "Select which metric to display",
-                ["All", "User RIASEC Similarity", "Normalized Education Score", "User Skill Similarity"]
-            )
+    st.altair_chart(chart, use_container_width=True)
 
-            if metric_filter != "All":
-                filtered_data = melted[melted["Metric"] == metric_filter]
-            else:
-                filtered_data = melted
+    # --- Optional Filters ---
+    st.markdown("### 🎛️ Filter Score Breakdown")
+    metric_filter = st.selectbox(
+            "Select which metric to display",
+            ["All", "User RIASEC Similarity", "Normalized Education Score", "User Skill Similarity"]
+        )
 
-            # --- Score Breakdown ---
-            st.markdown("### 📊 Score Breakdown for Top 5 Jobs")
-            top5 = results.head(5).copy()
-            
-            # Altair chart with fixed colors
-            chart = alt.Chart(filtered_data).mark_bar().encode(
-                x=alt.X("Score:Q", stack="zero"),
-                y=alt.Y("Title:N", sort='-x'),
-                color=alt.Color("Metric:N",
-                    scale=alt.Scale(
-                        domain=["User RIASEC Similarity", "Normalized Education Score", "User Skill Similarity"],
-                        range=["#1f77b4", "#2ca02c", "#d62728"]  # Blue, Green, Red
-                    )
-                ),
-                tooltip=["Title", "Metric", "Score"]
-            ).properties(width="container", height=400)
+    if metric_filter != "All":
+            filtered_data = melted[melted["Metric"] == metric_filter]
+    else:
+            filtered_data = melted
 
-            st.altair_chart(chart, use_container_width=True)
+    # --- Score Breakdown ---
+    st.markdown("### 📊 Score Breakdown for Top 5 Jobs")
+    chart = alt.Chart(filtered_data).mark_bar().encode(
+            x=alt.X("Score:Q", stack="zero"),
+            y=alt.Y("Title:N", sort='-x'),
+            color=alt.Color("Metric:N",
+                scale=alt.Scale(
+                    domain=["User RIASEC Similarity", "Normalized Education Score", "User Skill Similarity"],
+                    range=["#1f77b4", "#2ca02c", "#d62728"]
+                )
+            ),   
+        
+            tooltip=["Title", "Metric", "Score"]
+        ).properties(width="container", height=400)
 
-            # --- Auto-Generated Interpretation ---
-            st.markdown("### 📘 Interpretation")
+    st.altair_chart(chart, use_container_width=True)
 
-            score_means = top5[[
-                "User RIASEC Similarity", 
-                "Normalized Education Score", 
-                "User Skill Similarity"
-            ]].mean().round(2)
+        # --- Auto-Generated Interpretation ---
+    score_metrics = [
+        "User RIASEC Similarity",
+        "Normalized Education Score",
+        "User Skill Similarity"
+    ]
 
-            best_metric = score_means.idxmax()
-            st.info(f"Your strongest matching factor across the top jobs is **{best_metric}** (average score: {score_means[best_metric]})")
+    # Filter for only existing columns in top5
+    available_score_metrics = [col for col in score_metrics if col in top5.columns]
 
-            weakest_metric = score_means.idxmin()
-            st.warning(f"The lowest average contributor is **{weakest_metric}**. Consider improving this area to unlock more opportunities.")
+    if not available_score_metrics:
+        st.warning("⚠️ No scoring metrics are available to compute averages.")
+        score_means = pd.Series(dtype=float)
+    else:
+        score_means = top5[available_score_metrics].mean().round(2)
 
-            # --- RIASEC Radar Chart ---
-            st.markdown("### 🧭 Your RIASEC Personality Fit vs. Top Career")
-            riasec_labels = ['R', 'I', 'A', 'S', 'E', 'C']
-            user_values = [user_profile[code] for code in riasec_labels]
-            top_job_values = [top_job[code] for code in riasec_labels]
-            user_values += user_values[:1]
-            top_job_values += top_job_values[:1]
-            riasec_labels += riasec_labels[:1]
+        best_metric = score_means.idxmax()
+        st.info(f"Your strongest matching factor across the top jobs is **{best_metric}** (average score: {score_means[best_metric]})")
 
-            euclidean_distance = np.linalg.norm(np.array(user_values[:-1]) - np.array(top_job_values[:-1]))
-            match_score = int(100 - (euclidean_distance / (np.sqrt(len(user_values[:-1])) * 7)) * 100)
-            match_score = max(0, min(match_score, 100))
+        weakest_metric = score_means.idxmin()
+        st.warning(f"The lowest average contributor is **{weakest_metric}**. Consider improving this area to unlock more opportunities.")
 
-            log_usage(
-                session_id=session_id,
-                user_name=user_name,
-                riasec_scores={"R": r, "I": i, "A": a, "S": s, "E": e, "C": c},
-                education=edu_level,
-                skills=selected_skills,
-                top_match=top_job['Title'],
-                match_score=match_score
-            )
+        st.dataframe(score_means.to_frame(name="Average Score"))
 
-            st.markdown(f"🎯 **Match Score: {match_score}%** – Alignment with *{top_job['Title']}* role")
-            fig = go.Figure()
-            fig.add_trace(go.Scatterpolar(r=user_values, theta=riasec_labels, fill='toself', name='You',
-                                          line=dict(color='royalblue')))
-            fig.add_trace(go.Scatterpolar(r=top_job_values, theta=riasec_labels, fill='toself',
-                                          name=top_job['Title'], line=dict(color='darkorange')))
-            fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 7])), showlegend=True,
-                              width=700, height=550)
-            st.plotly_chart(fig, use_container_width=True)
+    # --- RIASEC Radar Chart ---
+    st.markdown("### 🧭 Your RIASEC Personality Fit vs. Top Career")
+    riasec_labels = ['R', 'I', 'A', 'S', 'E', 'C']
+    user_values = [user_profile[code] for code in riasec_labels]
+    top_job_values = [top_job[code] for code in riasec_labels]
+    user_values += user_values[:1]
+    top_job_values += top_job_values[:1]
+    riasec_labels += riasec_labels[:1]
 
-            alignment_traits = [code for code in riasec_labels[:-1] if abs(user_profile[code] - top_job[code]) <= 1.0]
-            misaligned_traits = [code for code in riasec_labels[:-1] if abs(user_profile[code] - top_job[code]) > 1.0]
-            st.markdown("#### 🔎 Alignment Insight")
-            st.success(f"You closely align with this role in: **{', '.join(alignment_traits)}**")
-            if misaligned_traits:
-                st.info(f"Consider developing traits related to: **{', '.join(misaligned_traits)}** for a stronger fit.")
+    euclidean_distance = np.linalg.norm(np.array(user_values[:-1]) - np.array(top_job_values[:-1]))
+    match_score = int(100 - (euclidean_distance / (np.sqrt(len(user_values[:-1])) * 7)) * 100)
+    match_score = max(0, min(match_score, 100))
 
-            # --- ✨ Job Description Display ---
-            st.markdown("### 📝 Detailed Overview of Your Top Career")
-            with st.expander(f"🔍 {top_job['Icon']} **{top_job['Title']}**", expanded=True):
-                st.markdown(f"""
-                    <div style="line-height: 1.7;">
-                        <p>{top_job['Description']}</p>
-                        <hr style="margin: 10px 0;">
-                        <p><strong>Suggested Skills:</strong> <em>{', '.join(user_profile['skills'])}</em></p>
-                        <p><strong>Education Required:</strong> <em>{user_profile['education_level']}</em></p>
-                    </div>
-                """, unsafe_allow_html=True)
+    log_usage(
+        session_id=session_id,
+        user_name=user_name,
+        riasec_scores={"R": r, "I": i, "A": a, "S": s, "E": e, "C": c},
+        education=edu_level,
+        skills=selected_skills,
+        top_match=top_job['Title'],
+        match_score=match_score
+    )
 
-            # --- Optional Fun Career ---
-            if st.checkbox("🎉 Surprise Career Match (just for fun!)"):
-                random_job = results[results["Title"] != top_job["Title"]].sample(1).iloc[0]
-                st.info(f"💡 **{random_job['Icon']} {random_job['Title']}**\n\n{random_job['Description'][:250]}...")
+    st.markdown(f"🎯 **Match Score: {match_score}%** – Alignment with *{top_job['Title']}* role")
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=user_values, theta=riasec_labels, fill='toself', name='You',
+        line=dict(color='royalblue')
+    ))
+    fig.add_trace(go.Scatterpolar(
+        r=top_job_values, theta=riasec_labels, fill='toself',
+        name=top_job['Title'], line=dict(color='darkorange')
+    ))
+    fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 7])),
+        showlegend=True, width=700, height=550
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    alignment_traits = [code for code in riasec_labels[:-1] if abs(user_profile[code] - top_job[code]) <= 1.0]
+    misaligned_traits = [code for code in riasec_labels[:-1] if abs(user_profile[code] - top_job[code]) > 1.0]
+
+    st.markdown("#### 🔎 Alignment Insight")
+    st.success(f"You closely align with this role in: **{', '.join(alignment_traits)}**")
+    if misaligned_traits:
+        st.info(f"Consider developing traits related to: **{', '.join(misaligned_traits)}** for a stronger fit.")
+
+    # --- ✨ Job Description Display ---
+    st.markdown("### 📝 Detailed Overview of Your Top Career")
+    with st.expander(f"🔍 {top_job['Icon']} **{top_job['Title']}**", expanded=True):
+        st.markdown(f"""
+            <div style="line-height: 1.7;">
+                <p>{top_job['Description']}</p>
+                <hr style="margin: 10px 0;">
+                <p><strong>Suggested Skills:</strong> <em>{', '.join(user_profile['skills'])}</em></p>
+                <p><strong>Education Required:</strong> <em>{user_profile['education_level']}</em></p>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # --- Optional Fun Career ---
+    if st.checkbox("🎉 Surprise Career Match (just for fun!)"):
+        random_job = results.sample(1).iloc[0]
+        st.info(f"💡 **{random_job['Icon']} {random_job['Title']}**\n\n{random_job['Description'][:250]}...")
 
 # --- 📣 Feedback Section ---
 st.markdown("---")
@@ -386,9 +418,7 @@ with st.form("feedback_form"):
 
 # Emoji Feedback
 st.markdown("Or leave a quick emoji reaction to your result:")
-
 emoji_col1, emoji_col2, emoji_col3 = st.columns(3)
-
 with emoji_col1:
     if st.button("😊 Yes, I liked it"):
         save_feedback(5, "Positive emoji reaction", session_id)
@@ -402,9 +432,19 @@ with emoji_col3:
         save_feedback(1, "Negative emoji reaction", session_id)
         st.toast("Sorry to hear that. We'll improve!")
 
-# section for admin or developers
+# --- Admin Section ---
 with st.expander("📊 View All Feedback (Admin Only)"):
     df_feedback = load_all_feedback()
+
+    # Convert to DataFrame if it's a non-empty list
+    if isinstance(df_feedback, list) and len(df_feedback) > 0:
+        df_feedback = pd.DataFrame(df_feedback)
+        if not df_feedback.empty:
+            st.dataframe(df_feedback)
+        else:
+            st.info("No feedback records to show.")
+    else:
+        st.info("No feedback data available.")
 
 # --- Insights Dashboard ---
 with st.expander("📈 User Insights Dashboard"):
@@ -440,4 +480,3 @@ st.markdown("""
     Youth Advocate & Data Scientist | Moringa School Capstone Project
 </div>
 """, unsafe_allow_html=True)
-

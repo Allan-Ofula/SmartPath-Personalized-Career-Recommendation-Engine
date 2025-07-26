@@ -1,120 +1,104 @@
-# engine.py
-
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from sklearn.metrics.pairwise import cosine_similarity
-
-# Load job profiles
-job_profiles_clean = pd.read_csv("data/job_profiles_clean.csv")
-
-# --- Utility: Clean Duplicate Skill Columns ---
-def clean_duplicate_skill_columns(df):
-    import re
-    skill_cols = df.columns[df.columns.str.startswith("Skill List_")]
-    base_names = [re.sub(r'(_x|_y)$', '', col) for col in skill_cols]
-
-    final_cols = {}
-    for col, base in zip(skill_cols, base_names):
-        if base not in final_cols:
-            final_cols[base] = col
-
-    base_skill_df = df[[final_cols[base] for base in final_cols]].copy()
-    base_skill_df.columns = list(final_cols.keys())
-
-    df = df.drop(columns=skill_cols, errors='ignore')
-    df = pd.concat([df, base_skill_df], axis=1)
-    return df
-
-# --- 1. Load and Prepare Skills Data ---
-def load_and_prepare_skills_data():
-    import sys
-    if getattr(sys, 'frozen', False):
-        base_path = Path(sys._MEIPASS)
-    else:
-        base_path = Path(__file__).resolve().parent.parent if '__file__' in globals() else Path.cwd()
-
-    skills_path = base_path / "data" / "Skills.xlsx"
-    skills_df = pd.read_excel(skills_path)
-
-    if 'Element Name' not in skills_df.columns or skills_df['Element Name'].isna().all():
-        raise ValueError("Skills.xlsx doesn't contain usable 'Element Name' data.")
-
-    relevant_skills = skills_df[skills_df['Element Name'].notna()]
-
-    skills_wide = relevant_skills.pivot_table(index="ONET_Code", columns="Element Name", values="Data Value", fill_value=0)
-    skills_wide = skills_wide.rename(columns=lambda x: f"Skill List_{x}" if x != "ONET_Code" else x)
-
-    return skills_wide.reset_index()
-
-# --- 2. Merge Skills with Job Profiles ---
-def merge_skills_into_profiles():
-    skills_data = load_and_prepare_skills_data()
-    merged = pd.merge(job_profiles_clean, skills_data, how="left", left_on="ONET_Code_x", right_on="ONET_Code")
-    merged = clean_duplicate_skill_columns(merged)
-    return merged
-
-# --- 3. Extract Skill Columns Dynamically ---
-def get_encoded_skill_columns():
-    merged_df = merge_skills_into_profiles()
-    encoded_columns = [col for col in merged_df.columns if col.startswith("Skill List_")]
-    return [col.replace("Skill List_", "").strip() for col in encoded_columns]
-
-# --- 4. Hybrid Recommender ---
 def hybrid_similarity_recommender(user_profile, top_n=10):
-    df = merge_skills_into_profiles()
+    import pandas as pd
+    from sklearn.metrics.pairwise import cosine_similarity
+    import numpy as np
+    from pathlib import Path
 
-    skill_cols = [col for col in df.columns if col.startswith("Skill List_")]
-    riasec_cols = ['R', 'I', 'A', 'S', 'E', 'C']
+    # --- Education Level Mapping ---
+    education_level_map = {
+        # Experience-like levels (mapped to 0)
+        "None or short demonstration": 0,
+        "Up to and including 1 month": 0,
+        "Anything beyond short demonstration, up to and including 1 month": 0,
+        "Over 1 month, up to and including 3 months": 0,
+        "Over 3 months, up to and including 6 months": 0,
+        "Over 6 months, up to and including 1 year": 0,
+        "Over 1 year, up to and including 2 years": 0,
+        "Over 2 years, up to and including 4 years": 0,
+        "Over 4 years, up to and including 6 years": 0,
+        "Over 6 years, up to and including 8 years": 0,
+        "Over 8 years, up to and including 10 years": 0,
+        "Over 10 years": 0,
 
-    df_riasec = df[riasec_cols].fillna(0).values
-    user_riasec = np.array([user_profile.get(code, 0) for code in riasec_cols]).reshape(1, -1)
-    riasec_similarity = cosine_similarity(df_riasec, user_riasec).flatten()
+        # Actual education levels
+        "High School Diploma or the equivalent": 1,
+        "Some College Courses": 2,
+        "Post-Secondary Certificate": 3,
+        "Associate's Degree (or other 2-year degree)": 4,
+        "Bachelor's Degree": 5,
+        "Post-Baccalaureate Certificate": 6,
+        "Master's Degree": 7,
+        "Post-Master's Certificate": 8,
+        "First Professional Degree": 9,
+        "Doctoral Degree": 10,
+        "Post-Doctoral Training": 11
+    }
 
-    if user_profile["skills"]:
-        selected_skills = [f"Skill List_{skill}" for skill in user_profile["skills"] if f"Skill List_{skill}" in skill_cols]
+    # --- Experience Level Mapping ---
+    experience_level_mapping = {
+        "None or short demonstration": 0,
+        "Up to and including 1 month": 1,
+        "Anything beyond short demonstration, up to and including 1 month": 2,
+        "Over 1 month, up to and including 3 months": 3,
+        "Over 3 months, up to and including 6 months": 4,
+        "Over 6 months, up to and including 1 year": 5,
+        "Over 1 year, up to and including 2 years": 6,
+        "Over 2 years, up to and including 4 years": 7,
+        "Over 4 years, up to and including 6 years": 8,
+        "Over 6 years, up to and including 8 years": 9,
+        "Over 8 years, up to and including 10 years": 10,
+        "Over 10 years": 11
+    }
 
-        if selected_skills:
-            df_skills = df[selected_skills].fillna(0).values
-            user_skills = np.ones((1, len(selected_skills)))  # equal weight
-            skill_similarity = cosine_similarity(df_skills, user_skills).flatten()
-        else:
-            skill_similarity = np.zeros(len(df))
+    # --- Load Dataset ---
+    data_path = Path(__file__).resolve().parent / "data" / "job_profiles_clean.csv"
+    df = pd.read_csv(data_path)
+
+    # --- Normalize Education ---
+    df['Education Numeric'] = df['Education Level'].map(education_level_map).fillna(0)
+    df['Normalized Education Score'] = df['Education Numeric'] / max(education_level_map.values())
+
+    # --- Normalize Experience ---
+    df['Experience Numeric'] = df['Preparation Level'].map(experience_level_mapping).fillna(0)
+    df['Normalized Experience Score'] = df['Experience Numeric'] / max(experience_level_mapping.values())
+
+    # --- RIASEC Similarity ---
+    user_riasec = np.array([user_profile[trait] for trait in ['R', 'I', 'A', 'S', 'E', 'C']])
+    user_riasec_normalized = user_riasec / np.sum(user_riasec)
+    career_riasec = df[['R', 'I', 'A', 'S', 'E', 'C']].values
+    df['User RIASEC Similarity'] = cosine_similarity([user_riasec_normalized], career_riasec)[0]
+
+    # --- Skill Match ---
+    selected_skills = user_profile.get('skills', [])
+    if selected_skills:
+        for skill in selected_skills:
+            skill_col = f"Skill List_{skill}"
+            if skill_col not in df.columns:
+                df[skill_col] = 0
+        skill_cols = [f"Skill List_{skill}" for skill in selected_skills]
+        df['User Skill Similarity'] = df[skill_cols].sum(axis=1) / len(selected_skills)
     else:
-        skill_similarity = np.zeros(len(df))
+        df['User Skill Similarity'] = 0
 
-    # Encode education level
-    education_order = [
-        "Less than High School", "High School", "Some College",
-        "Associate's Degree", "Bachelor's Degree", "Master's Degree", "Doctoral Degree"
-    ]
-    user_edu = education_order.index(user_profile["education_level"]) if user_profile["education_level"] in education_order else 0
-    job_edu = df["Education Level"].apply(lambda x: education_order.index(x) if x in education_order else 0)
-    education_match = 1 - abs(job_edu - user_edu) / len(education_order)
+    # --- Hybrid Score Calculation ---
+    df['Hybrid Recommendation Score'] = (
+        0.45 * df['User RIASEC Similarity'] +
+        0.25 * df['User Skill Similarity'] +
+        0.15 * df['Normalized Education Score'] +
+        0.15 * df['Normalized Experience Score']
+    )
 
-    final_score = 0.5 * riasec_similarity + 0.3 * skill_similarity + 0.2 * education_match
-    df["Score"] = final_score
+    # --- Top N Matches ---
+    top_matches = df.sort_values(by='Hybrid Recommendation Score', ascending=False).head(top_n)
 
-    top_matches = df.sort_values("Score", ascending=False).head(top_n)
-
-    return top_matches[[ 
-        "Title", "Description", "Score", "Education Level",
-        "R", "I", "A", "S", "E", "C"
-    ]], {
-        "total_jobs_considered": len(df),
-        "skills_matched": user_profile["skills"],
-        "personalized_message": f"Hello {user_profile.get('user_name', 'there')}, here are your top {top_n} job matches based on your RIASEC, skills, and education!"
-    }
-
-# --- Example usage ---
-if __name__ == "__main__":
-    sample_profile = {
-        "user_name": "Allan",
-        "R": 0.3, "I": 0.6, "A": 0.2, "S": 0.5, "E": 0.1, "C": 0.4,
-        "education_level": "Bachelor's Degree",
-        "skills": ["Critical Thinking", "Reading Comprehension", "Time Management"]
-    }
-
-    recommendations, info = hybrid_similarity_recommender(sample_profile)
-    print(info["personalized_message"])
-    print(recommendations.head(5))
+    return (
+        top_matches[[
+            'Title', 'Description', 'Education Level', 'Preparation Level',
+            'User RIASEC Similarity', 'User Skill Similarity',
+            'Normalized Education Score', 'Normalized Experience Score',
+            'Hybrid Recommendation Score', 'R', 'I', 'A', 'S', 'E', 'C'
+        ]],
+        {
+            "num_recommendations": len(top_matches)
+        }
+    )
