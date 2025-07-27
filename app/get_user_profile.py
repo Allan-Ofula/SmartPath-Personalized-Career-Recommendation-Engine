@@ -1,7 +1,8 @@
 # get_user_profile.py
-def get_user_profile(education_level, experience_level, selected_skills, riasec_scores):
+
+def get_user_profile(education_level_text, experience_level_text, selected_skills, riasec_scores):
     """
-    Prepares the user profile dictionary based on input fields.
+    Converts user selections into a structured profile with normalized scores.
     """
     education_level_map = {
         "Less than High School": 0,
@@ -30,13 +31,18 @@ def get_user_profile(education_level, experience_level, selected_skills, riasec_
     }
 
     return {
-        "education_level": education_level_map.get(education_level, 0),
-        "experience_level": experience_level_map.get(experience_level, 0),
+        "normalized_education_score": education_level_map.get(education_level_text, 0),
+        "education_label": education_level_text,
+        "experience_level": experience_level_map.get(experience_level_text, 0),
         "selected_skills": selected_skills,
         "riasec_scores": riasec_scores
     }
 
+
 def build_user_profile(form_data):
+    """
+    Extracts raw form input and returns a structured dictionary.
+    """
     return {
         'user_name': form_data.get('user_name', ''),
         'riasec_scores': {
@@ -47,6 +53,6 @@ def build_user_profile(form_data):
             'E': form_data.get('E', 0),
             'C': form_data.get('C', 0),
         },
-        'education_level': form_data.get('education_level', ''),
-        'skills': form_data.get('skills', [])  # 👈 change key here
+        'education_level': form_data.get('education_level', ''),  # text for display/filtering
+        'skills': form_data.get('skills', [])
     }

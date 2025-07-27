@@ -19,6 +19,8 @@ try:
 except ImportError:
     from analytics_stub import log_usage, load_usage_data
 
+from get_user_profile import build_user_profile, get_user_profile
+
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -117,11 +119,18 @@ if st.session_state['name_submitted']:
             c = st.slider("Conventional (C)", 0.0, 7.0, 4.0, step=0.5)
 
         st.subheader("🎓 Highest Education Level")
-        edu_level = st.selectbox("Select your highest level of education", [
-            "Less than High School", "High School Diploma or Equivalent", "Some College Courses",
-            "Associate Degree", "Bachelor's Degree", "Master's Degree",
-            "Doctoral or Professional Degree", "Post-Doctoral Training"
-        ], index=4)
+        education_levels = [
+            "Less than High School",
+            "High School Diploma or Equivalent",
+            "Some College Courses",
+            "Associate Degree",
+            "Bachelor's Degree",
+            "Master's Degree",
+            "Doctoral or Professional Degree",
+            "Post-Doctoral Training"
+        ]
+        user_education = st.selectbox("📚 Your Highest Education Level", education_levels, index=4)
+
 
         st.subheader("🛠️ Strong Skills (Select up to 5)")
         skill_options = ["Data Analysis", "Communication", "Problem Solving", "Project Management", "Creativity",
@@ -156,7 +165,8 @@ if st.session_state['name_submitted']:
             st.session_state['form_data'] = {
                 'user_name': user_name,
                 'R': r, 'I': i, 'A': a, 'S': s, 'E': e, 'C': c,
-                'education_level': edu_level,
+                'education_level': user_education,
+
                 'skills': selected_skills
             }
 
@@ -169,7 +179,7 @@ if st.session_state.get('career_submitted'):
         progress.progress(pct)
         time.sleep(0.05)
 
-    user_profile = st.session_state['form_data']
+    user_profile = build_user_profile(st.session_state['form_data'])
 
     try:
         results, meta = hybrid_similarity_recommender(user_profile)
@@ -240,9 +250,9 @@ if st.session_state.get('career_submitted'):
         # Check which of the expected metrics exist in the top5 DataFrame
         available_metrics = [col for col in expected_metrics if col in top5.columns]
 
-        if not expected_metrics :
+        if not available_metrics:
             st.warning("⚠️ No score metrics available to display.")
-        
+
         else:
             # Compute average score per metric across top 5 jobs
             melted = pd.melt(
@@ -331,7 +341,7 @@ if st.session_state.get('career_submitted'):
     # --- RIASEC Radar Chart ---
     st.markdown("### 🧭 Your RIASEC Personality Fit vs. Top Career")
     riasec_labels = ['R', 'I', 'A', 'S', 'E', 'C']
-    user_values = [user_profile[code] for code in riasec_labels]
+    user_values = [user_profile['riasec_scores'][code] for code in riasec_labels]
     top_job_values = [top_job[code] for code in riasec_labels]
     user_values += user_values[:1]
     top_job_values += top_job_values[:1]
@@ -345,7 +355,7 @@ if st.session_state.get('career_submitted'):
         session_id=session_id,
         user_name=user_name,
         riasec_scores={"R": r, "I": i, "A": a, "S": s, "E": e, "C": c},
-        education=edu_level,
+        education=user_education,
         skills=selected_skills,
         top_match=top_job['Title'],
         match_score=match_score
@@ -368,8 +378,8 @@ if st.session_state.get('career_submitted'):
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    alignment_traits = [code for code in riasec_labels[:-1] if abs(user_profile[code] - top_job[code]) <= 1.0]
-    misaligned_traits = [code for code in riasec_labels[:-1] if abs(user_profile[code] - top_job[code]) > 1.0]
+    alignment_traits = [code for code in riasec_labels[:-1] if abs(user_profile['riasec_scores'][code] - top_job[code]) <= 1.0]
+    misaligned_traits = [code for code in riasec_labels[:-1] if abs(user_profile['riasec_scores'][code] - top_job[code]) > 1.0]
 
     st.markdown("#### 🔎 Alignment Insight")
     st.success(f"You closely align with this role in: **{', '.join(alignment_traits)}**")
@@ -383,7 +393,7 @@ if st.session_state.get('career_submitted'):
             <div style="line-height: 1.7;">
                 <p>{top_job['Description']}</p>
                 <hr style="margin: 10px 0;">
-                <p><strong>Suggested Skills:</strong> <em>{', '.join(user_profile['skills'])}</em></p>
+                <p><strong>Suggested Skills:</strong> <em>{', '.join(user_profile.get('skills', []))}</em></p>
                 <p><strong>Education Required:</strong> <em>{user_profile['education_level']}</em></p>
             </div>
         """, unsafe_allow_html=True)
