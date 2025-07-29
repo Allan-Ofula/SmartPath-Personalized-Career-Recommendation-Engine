@@ -1,9 +1,6 @@
 # get_user_profile.py
 
 def get_user_profile(education_level_text, experience_level_text, selected_skills, riasec_scores):
-    """
-    Converts user selections into a structured profile with normalized scores.
-    """
     education_level_map = {
         "Less than High School": 0,
         "High School Diploma or Equivalent": 4,
@@ -18,7 +15,6 @@ def get_user_profile(education_level_text, experience_level_text, selected_skill
     experience_level_map = {
         "None or short demonstration": 0,
         "Up to and including 1 month": 1,
-        "Anything beyond short demonstration, up to and including 1 month": 2,
         "Over 1 month, up to and including 3 months": 3,
         "Over 3 months, up to and including 6 months": 4,
         "Over 6 months, up to and including 1 year": 5,
@@ -38,21 +34,38 @@ def get_user_profile(education_level_text, experience_level_text, selected_skill
         "riasec_scores": riasec_scores
     }
 
-
 def build_user_profile(form_data):
     """
-    Extracts raw form input and returns a structured dictionary.
+    Build and return a user profile dictionary based on form input.
     """
     return {
-        'user_name': form_data.get('user_name', ''),
-        'riasec_scores': {
-            'R': form_data.get('R', 0),
-            'I': form_data.get('I', 0),
-            'A': form_data.get('A', 0),
-            'S': form_data.get('S', 0),
-            'E': form_data.get('E', 0),
-            'C': form_data.get('C', 0),
-        },
-        'education_level': form_data.get('education_level', ''),  # text for display/filtering
-        'skills': form_data.get('skills', [])
+        'user_name': form_data.get('user_name', 'User'),
+        'R': form_data.get('R', 0),
+        'I': form_data.get('I', 0),
+        'A': form_data.get('A', 0),
+        'S': form_data.get('S', 0),
+        'E': form_data.get('E', 0),
+        'C': form_data.get('C', 0),
+        'education_level': form_data.get('education_level', 0),
+        'skills': form_data.get('skills', []),
     }
+
+def transform_user_profile(user_profile_dict):
+    """
+    Transform a raw user profile dictionary into a format suitable for similarity comparison.
+    """
+    import numpy as np
+
+    # Convert the profile into a vector for similarity comparison
+    vector = np.array([
+        user_profile_dict['R'],
+        user_profile_dict['I'],
+        user_profile_dict['A'],
+        user_profile_dict['S'],
+        user_profile_dict['E'],
+        user_profile_dict['C'],
+        user_profile_dict.get('education_level', 0)
+    ])
+
+    return vector.reshape(1, -1)
+
