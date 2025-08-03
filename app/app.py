@@ -396,7 +396,7 @@ st.markdown("""
     margin-top: 40px;
     padding-top: 20px;
     border-top: 1px solid #ccc;'>
-    &copy; 2025 <strong>SmartPath</strong> &mdash; Developed by <strong>Allan Ofula | Beth Nyambura | Beryl Okelo | Rachael Nyawira | Eugene Maina</strong> <br>
-    Youth Advocates & Data Scientists | Moringa School Capstone Project
+    &copy; 2025 <strong>SmartPath</strong> &mdash; Developed by <strong>Allan Ofula</strong> <br>
+    Youth Advocate & Data Scientist | Moringa School Capstone Project
 </div>
 """, unsafe_allow_html=True)
