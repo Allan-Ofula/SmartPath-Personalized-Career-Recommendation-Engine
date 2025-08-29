@@ -397,6 +397,6 @@ st.markdown("""
     padding-top: 20px;
     border-top: 1px solid #ccc;'>
     &copy; 2025 <strong>SmartPath</strong> &mdash; Developed by <strong>Allan Ofula</strong> <br>
-    Youth Advocate & Data Scientist | Moringa School Capstone Project
+    Youth Advocate | Data Scientist 
 </div>
 """, unsafe_allow_html=True)
